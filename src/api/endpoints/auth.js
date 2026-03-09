@@ -2,9 +2,8 @@ import api from '../client';
 
 export const authApi = {
   login:          (data)  => api.post('/auth/login', data),
-  aktivacija:     (data)  => api.post('/auth/aktivacija', data),
-  resetZahtev:    (email) => api.post('/auth/reset-zahtev', { email }),
-  resetLozinka:   (data)  => api.post('/auth/reset-lozinka', data),
-  changePassword: (data)  => api.post('/auth/promena-lozinke', data),
-  refresh:        (refreshToken) => api.post('/auth/refresh', { refreshToken }),
+  register:       (data)  => api.post('/auth/register', data),
+  activate:       (data)  => api.post('/auth/activate', data),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword:  (data)  => api.post('/auth/reset-password', data),
 };

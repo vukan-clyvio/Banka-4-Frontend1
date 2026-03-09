@@ -19,16 +19,16 @@ export default function EmployeeTable({ employees, onRowClick }) {
           </tr>
         </thead>
         <tbody>
-          {employees.map(z => (
-            <tr key={z.id} onClick={() => onRowClick(z.id)}>
-              <td className={styles.name}>{z.ime}</td>
-              <td className={styles.name}>{z.prezime}</td>
-              <td className={styles.email}>{z.email}</td>
-              <td>{z.pozicija}</td>
-              <td>{z.departman}</td>
+          {employees.map(emp => (
+            <tr key={emp.employee_id} onClick={() => onRowClick(emp.employee_id)}>
+              <td className={styles.name}>{emp.first_name}</td>
+              <td className={styles.name}>{emp.last_name}</td>
+              <td className={styles.email}>{emp.email}</td>
+              <td>{emp.position}</td>
+              <td>{emp.department}</td>
               <td>
-                <span className={`${styles.badge} ${z.aktivan ? styles.badgeActive : styles.badgeInactive}`}>
-                  {z.aktivan ? 'Aktivan' : 'Neaktivan'}
+                <span className={`${styles.badge} ${emp.active ? styles.badgeActive : styles.badgeInactive}`}>
+                  {emp.active ? 'Aktivan' : 'Neaktivan'}
                 </span>
               </td>
             </tr>

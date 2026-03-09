@@ -18,26 +18,29 @@ export default function EmployeeList() {
   const user     = useAuthStore(s => s.user);
 
   const [filters, setFilters] = useState({
-    search:    '',
-    status:    '',
-    departman: '',
-    pozicija:  '',
+    email:      '',
+    first_name: '',
+    last_name:  '',
+    position:   '',
   });
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const pageSize = 20;
 
-  const debouncedSearch = useDebounce(filters.search, 400);
+  const debouncedEmail     = useDebounce(filters.email, 400);
+  const debouncedFirstName = useDebounce(filters.first_name, 400);
+  const debouncedLastName  = useDebounce(filters.last_name, 400);
+  const debouncedPosition  = useDebounce(filters.position, 400);
 
   const { data, loading, error } = useFetch(
     () => employeesApi.getAll({
-      search:    debouncedSearch,
-      status:    filters.status,
-      departman: filters.departman,
-      pozicija:  filters.pozicija,
+      email:      debouncedEmail,
+      first_name: debouncedFirstName,
+      last_name:  debouncedLastName,
+      position:   debouncedPosition,
       page,
-      limit,
+      page_size:  pageSize,
     }),
-    [debouncedSearch, filters.status, filters.departman, filters.pozicija, page]
+    [debouncedEmail, debouncedFirstName, debouncedLastName, debouncedPosition, page]
   );
 
   useLayoutEffect(() => {
@@ -58,7 +61,7 @@ export default function EmployeeList() {
     setPage(1);
   }
 
-  const totalPages = data ? Math.ceil(data.total / limit) : 0;
+  const totalPages = data?.total_pages ?? 0;
 
   return (
     <div ref={pageRef} className={styles.stranica}>
@@ -74,7 +77,7 @@ export default function EmployeeList() {
               <h1 className={styles.pageTitle}>Zaposleni</h1>
               <p className={styles.pageDesc}>Pregled i upravljanje listom zaposlenih.</p>
             </div>
-            {user?.jeAdmin && (
+            {user?.is_admin && (
               <Link to="/employees/new" className={styles.btnPrimary}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="12" y1="5" x2="12" y2="19"/>

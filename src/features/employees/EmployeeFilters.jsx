@@ -9,31 +9,28 @@ export default function EmployeeFilters({ filters, onFilterChange }) {
     <div className={styles.filters}>
       <input
         type="text"
-        placeholder="Pretraži po imenu, prezimenu ili emailu..."
-        value={filters.search}
-        onChange={e => update('search', e.target.value)}
+        placeholder="Email..."
+        value={filters.email}
+        onChange={e => update('email', e.target.value)}
         className={styles.searchInput}
       />
-      <select
-        value={filters.status}
-        onChange={e => update('status', e.target.value)}
-        className={styles.selectInput}
-      >
-        <option value="">Svi statusi</option>
-        <option value="aktivan">Aktivni</option>
-        <option value="neaktivan">Neaktivni</option>
-      </select>
       <input
         type="text"
-        placeholder="Departman"
-        value={filters.departman}
-        onChange={e => update('departman', e.target.value)}
+        placeholder="Ime..."
+        value={filters.first_name}
+        onChange={e => update('first_name', e.target.value)}
       />
       <input
         type="text"
-        placeholder="Pozicija"
-        value={filters.pozicija}
-        onChange={e => update('pozicija', e.target.value)}
+        placeholder="Prezime..."
+        value={filters.last_name}
+        onChange={e => update('last_name', e.target.value)}
+      />
+      <input
+        type="text"
+        placeholder="Pozicija..."
+        value={filters.position}
+        onChange={e => update('position', e.target.value)}
       />
     </div>
   );

@@ -11,10 +11,10 @@ export default function Login() {
   const setAuth  = useAuthStore(s => s.setAuth);
   const cardRef  = useRef(null);
 
-  const [email,      setEmail]      = useState('');
-  const [lozinka,    setLozinka]    = useState('');
-  const [greska,     setGreska]     = useState(null);
-  const [ucitavanje, setUcitavanje] = useState(false);
+  const [username,   setUsername]   = useState('');
+  const [password,   setPassword]  = useState('');
+  const [error,      setError]     = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -30,23 +30,22 @@ export default function Login() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setGreska(null);
-    setUcitavanje(true);
+    setError(null);
+    setSubmitting(true);
     try {
-      const res = await authApi.login({ email, lozinka });
-      setAuth(res.data.user, res.data.token, res.data.refreshToken);
+      const res = await authApi.login({ username, password });
+      setAuth(res.employee, res.access_token);
       navigate('/');
     } catch (err) {
-      setGreska(err.error ?? 'Pogrešan email ili lozinka. Proverite unos i pokušajte ponovo.');
+      setError(err.error ?? 'Pogrešan username ili lozinka. Proverite unos i pokušajte ponovo.');
     } finally {
-      setUcitavanje(false);
+      setSubmitting(false);
     }
   }
 
   return (
     <div className={styles.wrap}>
 
-      {/* Leva — brand panel */}
       <aside className={styles.brand}>
         <div className={styles.brandLogo}>
           <div className={styles.brandIcon}>
@@ -84,41 +83,40 @@ export default function Login() {
 
       </aside>
 
-      {/* Desna — forma panel */}
       <main className={styles.formPanel}>
         <div ref={cardRef} className={styles.card}>
           <h2 className={styles.formTitle}>Dobrodošli nazad</h2>
           <p className={styles.formSubtitle}>Unesite vaše kredencijale za pristup portalu.</p>
           <div className={styles.divider} />
 
-          {greska && <Alert tip="greska" poruka={greska} />}
+          {error && <Alert tip="greska" poruka={error} />}
 
           <form onSubmit={handleSubmit} noValidate>
             <div className={styles.field}>
-              <label htmlFor="email">Email adresa</label>
+              <label htmlFor="username">Username</label>
               <input
-                id="email"
-                type="email"
-                placeholder="ime.prezime@raf.rs"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                autoComplete="email"
+                id="username"
+                type="text"
+                placeholder="korisnicko.ime"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                autoComplete="username"
                 required
-                className={email ? styles.hasValue : ''}
+                className={username ? styles.hasValue : ''}
               />
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="lozinka">Lozinka</label>
+              <label htmlFor="password">Lozinka</label>
               <input
-                id="lozinka"
+                id="password"
                 type="password"
                 placeholder="Unesite lozinku"
-                value={lozinka}
-                onChange={e => setLozinka(e.target.value)}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
-                className={lozinka ? styles.hasValue : ''}
+                className={password ? styles.hasValue : ''}
               />
             </div>
 
@@ -134,7 +132,7 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={ucitavanje}
+              disabled={submitting}
               className={styles.btnPrimary}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -142,7 +140,7 @@ export default function Login() {
                 <polyline points="10 17 15 12 10 7"/>
                 <line x1="15" y1="12" x2="3" y2="12"/>
               </svg>
-              {ucitavanje ? 'Prijavljivanje...' : 'Prijavi se'}
+              {submitting ? 'Prijavljivanje...' : 'Prijavi se'}
             </button>
           </form>
 

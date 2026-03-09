@@ -8,14 +8,14 @@ import styles                                 from './AccountActivation.module.c
 
 export default function AccountActivation() {
   const [searchParams] = useSearchParams();
-  const tokenIzUrla    = searchParams.get('token');
+  const urlToken       = searchParams.get('token');
   const cardRef        = useRef(null);
 
-  const [lozinka, setLozinka] = useState('');
-  const [potvrda, setPotvrda] = useState('');
-  const [greska,  setGreska]  = useState(null);
-  const [saljem,  setSaljem]  = useState(false);
-  const [uspeh,   setUspeh]   = useState(false);
+  const [password,   setPassword]   = useState('');
+  const [confirm,    setConfirm]    = useState('');
+  const [error,      setError]      = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [success,    setSuccess]    = useState(false);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -31,26 +31,26 @@ export default function AccountActivation() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const lozinkaGreska = validirajLozinku(lozinka);
-    if (lozinkaGreska)           { setGreska(lozinkaGreska); return; }
-    const poklapaGreska = sePoklapa(lozinka, potvrda, 'Lozinke se ne poklapaju');
-    if (poklapaGreska)           { setGreska(poklapaGreska); return; }
+    const pwError = validirajLozinku(password);
+    if (pwError)                              { setError(pwError); return; }
+    const matchError = sePoklapa(password, confirm, 'Lozinke se ne poklapaju');
+    if (matchError)                           { setError(matchError); return; }
 
-    setSaljem(true);
-    setGreska(null);
+    setSubmitting(true);
+    setError(null);
     try {
-      await authApi.aktivacija({ token: tokenIzUrla, lozinka, potvrda });
-      setUspeh(true);
+      await authApi.activate({ token: urlToken, password });
+      setSuccess(true);
     } catch (err) {
-      setGreska(err.error ?? 'Link je istekao ili nevažeći. Kontaktirajte administratora.');
+      setError(err.error ?? 'Link je istekao ili nevažeći. Kontaktirajte administratora.');
     } finally {
-      setSaljem(false);
+      setSubmitting(false);
     }
   }
 
-  const jacina = lozinka ? jacinalozinke(lozinka) : null;
+  const strength = password ? jacinalozinke(password) : null;
 
-  if (!tokenIzUrla) {
+  if (!urlToken) {
     return (
       <div className={styles.formPanel} style={{ minHeight: '100vh' }}>
         <div className={styles.card}>
@@ -66,7 +66,6 @@ export default function AccountActivation() {
   return (
     <div className={styles.wrap}>
 
-      {/* Leva — brand panel */}
       <aside className={styles.brand}>
         <div className={styles.brandLogo}>
           <div className={styles.brandIcon}>
@@ -112,10 +111,9 @@ export default function AccountActivation() {
         <div className={styles.brandFooter}></div>
       </aside>
 
-      {/* Desna — forma panel */}
       <main className={styles.formPanel}>
         <div ref={cardRef} className={styles.card}>
-          {uspeh ? (
+          {success ? (
             <div className={styles.successCenter}>
               <div className={styles.successIcon}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5">
@@ -136,45 +134,45 @@ export default function AccountActivation() {
               </p>
               <div className={styles.divider} />
 
-              {greska && <Alert tip="greska" poruka={greska} />}
+              {error && <Alert tip="greska" poruka={error} />}
 
               <form onSubmit={handleSubmit} noValidate>
                 <div className={styles.field}>
-                  <label htmlFor="lozinka">
+                  <label htmlFor="password">
                     Lozinka <span className={styles.required}>*</span>
                   </label>
                   <input
-                    id="lozinka"
+                    id="password"
                     type="password"
-                    value={lozinka}
-                    onChange={e => { setLozinka(e.target.value); setGreska(null); }}
-                    className={lozinka ? styles.hasValue : ''}
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); setError(null); }}
+                    className={password ? styles.hasValue : ''}
                   />
-                  {jacina && (
+                  {strength && (
                     <div className={styles.pwStrength}>
                       <div className={styles.pwStrengthBar}>
                         <div
                           className={styles.pwStrengthFill}
-                          style={{ width: jacina.procenat, background: jacina.boja }}
+                          style={{ width: strength.procenat, background: strength.boja }}
                         />
                       </div>
-                      <span className={styles.pwStrengthLabel} style={{ color: jacina.boja }}>
-                        {jacina.naziv} lozinka
+                      <span className={styles.pwStrengthLabel} style={{ color: strength.boja }}>
+                        {strength.naziv} lozinka
                       </span>
                     </div>
                   )}
                 </div>
 
                 <div className={styles.field}>
-                  <label htmlFor="potvrda">
+                  <label htmlFor="confirm">
                     Potvrdi lozinku <span className={styles.required}>*</span>
                   </label>
                   <input
-                    id="potvrda"
+                    id="confirm"
                     type="password"
-                    value={potvrda}
-                    onChange={e => { setPotvrda(e.target.value); setGreska(null); }}
-                    className={potvrda ? styles.hasValue : ''}
+                    value={confirm}
+                    onChange={e => { setConfirm(e.target.value); setError(null); }}
+                    className={confirm ? styles.hasValue : ''}
                   />
                 </div>
 
@@ -184,11 +182,11 @@ export default function AccountActivation() {
                   ))}
                 </div>
 
-                <button type="submit" disabled={saljem} className={styles.btnPrimary} style={{ marginTop: 24 }}>
+                <button type="submit" disabled={submitting} className={styles.btnPrimary} style={{ marginTop: 24 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
-                  {saljem ? 'Aktivacija...' : 'Aktiviraj nalog'}
+                  {submitting ? 'Aktivacija...' : 'Aktiviraj nalog'}
                 </button>
               </form>
 

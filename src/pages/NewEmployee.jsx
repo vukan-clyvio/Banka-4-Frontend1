@@ -1,35 +1,36 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import { useNavigate }                        from 'react-router-dom';
 import gsap                                   from 'gsap';
-import { employeesApi }                       from '../api/endpoints/employees';
+import { authApi }                            from '../api/endpoints/auth';
 import { jeObavezno, jeValidanEmail, jeValidanTelefon } from '../utils/helpers';
 import Navbar                                 from '../components/layout/Navbar';
 import Alert                                  from '../components/ui/Alert';
 import styles                                 from './NewEmployee.module.css';
 
-const POL_OPCIJE = ['Muški', 'Ženski', 'Ne želim da navedem'];
+const GENDER_OPTIONS = ['M', 'F'];
 
 export default function NewEmployee() {
   const navigate = useNavigate();
   const pageRef  = useRef(null);
 
-  const [forma, setForma] = useState({
-    ime:           '',
-    prezime:       '',
+  const [form, setForm] = useState({
+    first_name:    '',
+    last_name:     '',
     email:         '',
-    telefon:       '',
-    adresa:        '',
-    datumRodjenja: '',
-    pol:           '',
-    aktivan:       true,
-    pozicija:      '',
-    departman:     '',
+    phone_number:  '',
+    address:       '',
+    date_of_birth: '',
+    gender:        '',
+    active:        true,
+    position:      '',
+    department:    '',
     username:      '',
+    password:      '',
   });
 
-  const [greske,    setGreske]    = useState({});
-  const [apiGreska, setApiGreska] = useState(null);
-  const [saljem,    setSaljem]    = useState(false);
+  const [errors,     setErrors]     = useState({});
+  const [apiError,   setApiError]   = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -44,55 +45,56 @@ export default function NewEmployee() {
     return () => ctx.revert();
   }, []);
 
-  function azurirajPolje(polje, vrednost) {
-    setForma(prev => {
-      const novo = { ...prev, [polje]: vrednost };
-      if (polje === 'ime' || polje === 'prezime') {
-        const i = polje === 'ime'     ? vrednost : prev.ime;
-        const p = polje === 'prezime' ? vrednost : prev.prezime;
-        if (i && p) {
-          novo.username = `${i.toLowerCase().charAt(0)}${p.toLowerCase().replace(/\s+/g, '')}`;
+  function updateField(field, value) {
+    setForm(prev => {
+      const next = { ...prev, [field]: value };
+      if (field === 'first_name' || field === 'last_name') {
+        const f = field === 'first_name' ? value : prev.first_name;
+        const l = field === 'last_name'  ? value : prev.last_name;
+        if (f && l) {
+          next.username = `${f.toLowerCase().charAt(0)}${l.toLowerCase().replace(/\s+/g, '')}`;
         }
       }
-      return novo;
+      return next;
     });
-    if (greske[polje]) setGreske(prev => ({ ...prev, [polje]: null }));
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
   }
 
-  function validiraj() {
-    const nove = {};
-    const g = (polje, greska) => { if (greska) nove[polje] = greska; };
+  function validate() {
+    const e = {};
+    const check = (field, err) => { if (err) e[field] = err; };
 
-    g('ime',           jeObavezno(forma.ime));
-    g('prezime',       jeObavezno(forma.prezime));
-    g('email',         jeObavezno(forma.email) ?? jeValidanEmail(forma.email));
-    g('datumRodjenja', jeObavezno(forma.datumRodjenja));
-    g('pol',           jeObavezno(forma.pol));
-    g('pozicija',      jeObavezno(forma.pozicija));
-    g('departman',     jeObavezno(forma.departman));
-    g('username',      jeObavezno(forma.username));
+    check('first_name',    jeObavezno(form.first_name));
+    check('last_name',     jeObavezno(form.last_name));
+    check('email',         jeObavezno(form.email) ?? jeValidanEmail(form.email));
+    check('date_of_birth', jeObavezno(form.date_of_birth));
+    check('gender',        jeObavezno(form.gender));
+    check('position',      jeObavezno(form.position));
+    check('department',    jeObavezno(form.department));
+    check('username',      jeObavezno(form.username));
+    check('password',      jeObavezno(form.password));
 
-    if (forma.telefon && jeValidanTelefon(forma.telefon)) {
-      nove.telefon = jeValidanTelefon(forma.telefon);
+    if (form.phone_number && jeValidanTelefon(form.phone_number)) {
+      e.phone_number = jeValidanTelefon(form.phone_number);
     }
 
-    setGreske(nove);
-    return Object.keys(nove).length === 0;
+    setErrors(e);
+    return Object.keys(e).length === 0;
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!validiraj()) return;
+    if (!validate()) return;
 
-    setSaljem(true);
-    setApiGreska(null);
+    setSubmitting(true);
+    setApiError(null);
     try {
-      await employeesApi.create(forma);
+      await authApi.register(form);
       navigate('/employees');
     } catch (err) {
-      setApiGreska(err.error ?? 'Došlo je do greške. Pokušajte ponovo.');
+      setApiError(err.error ?? 'Došlo je do greške. Pokušajte ponovo.');
     } finally {
-      setSaljem(false);
+      setSubmitting(false);
     }
   }
 
@@ -129,10 +131,8 @@ export default function NewEmployee() {
         </div>
 
         <form onSubmit={handleSubmit} noValidate className={`page-anim ${styles.grid}`}>
-          {/* ── Forma ── */}
           <div className={styles.formCard}>
 
-            {/* Lični podaci */}
             <div className={styles.formSection}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionIcon}>
@@ -144,91 +144,90 @@ export default function NewEmployee() {
                 <span className={styles.sectionTitle}>Lični podaci</span>
               </div>
 
-              {apiGreska && <Alert tip="greska" poruka={apiGreska} />}
+              {apiError && <Alert tip="greska" poruka={apiError} />}
 
               <div className={styles.fieldGrid2}>
-                <Polje label="Ime" required greska={greske.ime}>
+                <Polje label="Ime" required greska={errors.first_name}>
                   <input
                     type="text"
-                    value={forma.ime}
-                    onChange={e => azurirajPolje('ime', e.target.value)}
-                    className={forma.ime ? styles.hasValue : ''}
+                    value={form.first_name}
+                    onChange={e => updateField('first_name', e.target.value)}
+                    className={form.first_name ? styles.hasValue : ''}
                   />
                 </Polje>
 
-                <Polje label="Prezime" required greska={greske.prezime}>
+                <Polje label="Prezime" required greska={errors.last_name}>
                   <input
                     type="text"
-                    value={forma.prezime}
-                    onChange={e => azurirajPolje('prezime', e.target.value)}
-                    className={forma.prezime ? styles.hasValue : ''}
+                    value={form.last_name}
+                    onChange={e => updateField('last_name', e.target.value)}
+                    className={form.last_name ? styles.hasValue : ''}
                   />
                 </Polje>
 
-                <Polje label="Email adresa" required greska={greske.email}>
+                <Polje label="Email adresa" required greska={errors.email}>
                   <input
                     type="email"
-                    value={forma.email}
-                    onChange={e => azurirajPolje('email', e.target.value)}
-                    className={forma.email ? styles.hasValue : ''}
+                    value={form.email}
+                    onChange={e => updateField('email', e.target.value)}
+                    className={form.email ? styles.hasValue : ''}
                   />
                 </Polje>
 
-                <Polje label="Broj telefona" greska={greske.telefon}>
+                <Polje label="Broj telefona" greska={errors.phone_number}>
                   <input
                     type="tel"
-                    value={forma.telefon}
+                    value={form.phone_number}
                     placeholder="+381..."
-                    onChange={e => azurirajPolje('telefon', e.target.value)}
-                    className={forma.telefon ? styles.hasValue : ''}
+                    onChange={e => updateField('phone_number', e.target.value)}
+                    className={form.phone_number ? styles.hasValue : ''}
                   />
                 </Polje>
 
-                <Polje label="Adresa" greska={greske.adresa}>
+                <Polje label="Adresa" greska={errors.address}>
                   <input
                     type="text"
-                    value={forma.adresa}
-                    onChange={e => azurirajPolje('adresa', e.target.value)}
-                    className={forma.adresa ? styles.hasValue : ''}
+                    value={form.address}
+                    onChange={e => updateField('address', e.target.value)}
+                    className={form.address ? styles.hasValue : ''}
                   />
                 </Polje>
 
-                <Polje label="Datum rođenja" required greska={greske.datumRodjenja}>
+                <Polje label="Datum rođenja" required greska={errors.date_of_birth}>
                   <input
                     type="date"
-                    value={forma.datumRodjenja}
-                    onChange={e => azurirajPolje('datumRodjenja', e.target.value)}
-                    className={forma.datumRodjenja ? styles.hasValue : ''}
+                    value={form.date_of_birth}
+                    onChange={e => updateField('date_of_birth', e.target.value)}
+                    className={form.date_of_birth ? styles.hasValue : ''}
                   />
                 </Polje>
 
-                <Polje label="Pol" required greska={greske.pol}>
+                <Polje label="Pol" required greska={errors.gender}>
                   <select
-                    value={forma.pol}
-                    onChange={e => azurirajPolje('pol', e.target.value)}
-                    className={forma.pol ? styles.hasValue : ''}
+                    value={form.gender}
+                    onChange={e => updateField('gender', e.target.value)}
+                    className={form.gender ? styles.hasValue : ''}
                   >
                     <option value="">Izaberite...</option>
-                    {POL_OPCIJE.map(o => <option key={o} value={o}>{o}</option>)}
+                    {GENDER_OPTIONS.map(o => <option key={o} value={o}>{o === 'M' ? 'Muški' : 'Ženski'}</option>)}
                   </select>
                 </Polje>
 
                 <Polje label="Status pri kreiranju">
                   <div
                     className={styles.toggleWrap}
-                    onClick={() => azurirajPolje('aktivan', !forma.aktivan)}
+                    onClick={() => updateField('active', !form.active)}
                     role="switch"
-                    aria-checked={forma.aktivan}
+                    aria-checked={form.active}
                     tabIndex={0}
                   >
                     <span className={styles.toggleLabel}>Aktivan nalog</span>
-                    <div className={`${styles.toggle} ${forma.aktivan ? '' : styles.toggleOff}`} />
+                    <div className={`${styles.toggle} ${form.active ? '' : styles.toggleOff}`} />
                   </div>
                 </Polje>
               </div>
             </div>
 
-            {/* Radno mesto */}
             <div className={styles.formSection}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionIcon}>
@@ -241,27 +240,26 @@ export default function NewEmployee() {
               </div>
 
               <div className={styles.fieldGrid2}>
-                <Polje label="Pozicija" required greska={greske.pozicija}>
+                <Polje label="Pozicija" required greska={errors.position}>
                   <input
                     type="text"
-                    value={forma.pozicija}
-                    onChange={e => azurirajPolje('pozicija', e.target.value)}
-                    className={forma.pozicija ? styles.hasValue : ''}
+                    value={form.position}
+                    onChange={e => updateField('position', e.target.value)}
+                    className={form.position ? styles.hasValue : ''}
                   />
                 </Polje>
 
-                <Polje label="Departman" required greska={greske.departman}>
+                <Polje label="Departman" required greska={errors.department}>
                   <input
                     type="text"
-                    value={forma.departman}
-                    onChange={e => azurirajPolje('departman', e.target.value)}
-                    className={forma.departman ? styles.hasValue : ''}
+                    value={form.department}
+                    onChange={e => updateField('department', e.target.value)}
+                    className={form.department ? styles.hasValue : ''}
                   />
                 </Polje>
               </div>
             </div>
 
-            {/* Pristup sistemu */}
             <div className={styles.formSection}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionIcon}>
@@ -273,22 +271,31 @@ export default function NewEmployee() {
                 <span className={styles.sectionTitle}>Pristup sistemu</span>
               </div>
 
-              <Polje label="Username" required greska={greske.username}>
-                <div className={styles.inputWithBadge}>
+              <div className={styles.fieldGrid2}>
+                <Polje label="Username" required greska={errors.username}>
+                  <div className={styles.inputWithBadge}>
+                    <input
+                      type="text"
+                      value={form.username}
+                      onChange={e => updateField('username', e.target.value)}
+                      className={form.username ? styles.hasValue : ''}
+                    />
+                    <span className={styles.inputBadge}>Auto-gen</span>
+                  </div>
+                </Polje>
+
+                <Polje label="Lozinka" required greska={errors.password}>
                   <input
-                    type="text"
-                    value={forma.username}
-                    onChange={e => azurirajPolje('username', e.target.value)}
-                    className={forma.username ? styles.hasValue : ''}
+                    type="password"
+                    value={form.password}
+                    onChange={e => updateField('password', e.target.value)}
+                    className={form.password ? styles.hasValue : ''}
+                    autoComplete="new-password"
                   />
-                  <span className={styles.inputBadge}>Auto-gen</span>
-                </div>
-              </Polje>
+                </Polje>
+              </div>
 
               <div className={styles.field} style={{ marginTop: 16 }}>
-                <Alert tip="info">
-                  Zaposleni postavlja lozinku sam, putem aktivacionog linka koji dobija na email.
-                </Alert>
                 <div className={styles.pwConstraints}>
                   {['Min. 8 karaktera', 'Max. 32 karaktera', '≥ 2 broja', '1 veliko slovo', '1 malo slovo'].map(t => (
                     <span key={t} className={styles.pwTag}>{t}</span>
@@ -297,23 +304,21 @@ export default function NewEmployee() {
               </div>
             </div>
 
-            {/* Akcije */}
             <div className={styles.formActions}>
               <button type="button" className={styles.btnGhost} onClick={() => navigate(-1)}>
                 Otkaži
               </button>
               <div className={styles.actionsRight}>
-                <button type="submit" disabled={saljem} className={styles.btnPrimary}>
+                <button type="submit" disabled={submitting} className={styles.btnPrimary}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
-                  {saljem ? 'Kreiranje...' : 'Kreiraj zaposlenog'}
+                  {submitting ? 'Kreiranje...' : 'Kreiraj zaposlenog'}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* ── Sidebar ── */}
           <aside className={`page-anim ${styles.sidebar}`}>
             <div className={styles.infoCard}>
               <div className={styles.infoCardHeader}>
@@ -328,7 +333,7 @@ export default function NewEmployee() {
                 {[
                   { bold: 'Email mora biti jedinstven', rest: ' — dva naloga ne mogu imati isti email' },
                   { bold: 'Username', rest: ' se auto-generiše iz imena, ali ga možete izmeniti' },
-                  { bold: 'Administrator ne unosi lozinku', rest: ' — zaposleni je postavlja sam' },
+                  { bold: 'Lozinka je obavezna', rest: ' — mora ispunjavati pravila jačine' },
                   { bold: 'Permisije', rest: ' se dodeljuju nakon kreiranja iz profila zaposlenog' },
                 ].map((item, i) => (
                   <div key={i} className={styles.infoItem}>
@@ -347,7 +352,7 @@ export default function NewEmployee() {
                 <div className={styles.emailTag}>Aktivacioni email</div>
                 <div className={styles.emailPreviewTitle}>Primer emaila koji zaposleni prima</div>
                 <div className={styles.emailPreviewText}>
-                  Poštovani <strong>{forma.ime || 'zaposleni'}</strong>,<br /><br />
+                  Poštovani <strong>{form.first_name || 'zaposleni'}</strong>,<br /><br />
                   Vaš nalog na RAFBank portalu je kreiran. Kliknite na dugme ispod da aktivirate nalog i postavite lozinku.<br /><br />
                   <em>Link ističe za 24 sata.</em>
                 </div>

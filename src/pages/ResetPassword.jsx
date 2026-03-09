@@ -6,28 +6,28 @@ import { validirajLozinku, sePoklapa, jacinalozinke } from '../utils/helpers';
 import Alert                                  from '../components/ui/Alert';
 import styles                                 from './ResetPassword.module.css';
 
-function StepIndicator({ korak }) {
-  const koraci = [
-    { naziv: 'Unesi email',   broj: 1 },
-    { naziv: 'Proveri inbox', broj: 2 },
-    { naziv: 'Nova lozinka',  broj: 3 },
+function StepIndicator({ step }) {
+  const steps = [
+    { label: 'Unesi email',   number: 1 },
+    { label: 'Proveri inbox', number: 2 },
+    { label: 'Nova lozinka',  number: 3 },
   ];
 
   return (
     <div className={styles.steps}>
-      {koraci.map((k, i) => {
-        const done   = k.broj < korak;
-        const active = k.broj === korak;
+      {steps.map((s, i) => {
+        const done   = s.number < step;
+        const active = s.number === step;
         return (
-          <div key={k.broj} className={styles.stepItem}>
+          <div key={s.number} className={styles.stepItem}>
             <div className={`${styles.stepCircle} ${done ? styles.done : active ? styles.active : styles.inactive}`}>
-              {done ? '✓' : k.broj}
+              {done ? '✓' : s.number}
             </div>
             <div className={styles.stepInfo}>
-              <div className={styles.stepNumber}>Korak {k.broj}</div>
-              <div className={`${styles.stepName} ${active ? styles.stepNameActive : ''}`}>{k.naziv}</div>
+              <div className={styles.stepNumber}>Korak {s.number}</div>
+              <div className={`${styles.stepName} ${active ? styles.stepNameActive : ''}`}>{s.label}</div>
             </div>
-            {i < koraci.length - 1 && (
+            {i < steps.length - 1 && (
               <div className={`${styles.stepLine} ${done ? styles.stepLineDone : ''}`} />
             )}
           </div>
@@ -39,16 +39,16 @@ function StepIndicator({ korak }) {
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
-  const tokenIzUrla    = searchParams.get('token');
+  const urlToken       = searchParams.get('token');
   const cardRef        = useRef(null);
 
-  const [korak,   setKorak]   = useState(tokenIzUrla ? 3 : 1);
-  const [email,   setEmail]   = useState('');
-  const [lozinka, setLozinka] = useState('');
-  const [potvrda, setPotvrda] = useState('');
-  const [greska,  setGreska]  = useState(null);
-  const [saljem,  setSaljem]  = useState(false);
-  const [uspeh,   setUspeh]   = useState(false);
+  const [step,       setStep]       = useState(urlToken ? 3 : 1);
+  const [email,      setEmail]      = useState('');
+  const [password,   setPassword]   = useState('');
+  const [confirm,    setConfirm]    = useState('');
+  const [error,      setError]      = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [success,    setSuccess]    = useState(false);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -60,47 +60,46 @@ export default function ResetPassword() {
       });
     });
     return () => ctx.revert();
-  }, [korak]);
+  }, [step]);
 
-  async function handleZahtev(e) {
+  async function handleRequest(e) {
     e.preventDefault();
-    setSaljem(true);
-    setGreska(null);
+    setSubmitting(true);
+    setError(null);
     try {
-      await authApi.resetZahtev(email);
-      setKorak(2);
+      await authApi.forgotPassword(email);
+      setStep(2);
     } catch (err) {
-      setGreska(err.error ?? 'Greška. Proverite email adresu.');
+      setError(err.error ?? 'Greška. Proverite email adresu.');
     } finally {
-      setSaljem(false);
+      setSubmitting(false);
     }
   }
 
   async function handleReset(e) {
     e.preventDefault();
-    const lozinkaGreska = validirajLozinku(lozinka);
-    if (lozinkaGreska)           { setGreska(lozinkaGreska); return; }
-    const poklapaGreska = sePoklapa(lozinka, potvrda, 'Lozinke se ne poklapaju');
-    if (poklapaGreska)           { setGreska(poklapaGreska); return; }
+    const pwError = validirajLozinku(password);
+    if (pwError)                              { setError(pwError); return; }
+    const matchError = sePoklapa(password, confirm, 'Lozinke se ne poklapaju');
+    if (matchError)                           { setError(matchError); return; }
 
-    setSaljem(true);
-    setGreska(null);
+    setSubmitting(true);
+    setError(null);
     try {
-      await authApi.resetLozinka({ token: tokenIzUrla, lozinka, potvrda });
-      setUspeh(true);
+      await authApi.resetPassword({ token: urlToken, new_password: password });
+      setSuccess(true);
     } catch (err) {
-      setGreska(err.error ?? 'Link je istekao ili nevažeći.');
+      setError(err.error ?? 'Link je istekao ili nevažeći.');
     } finally {
-      setSaljem(false);
+      setSubmitting(false);
     }
   }
 
-  const jacina = lozinka ? jacinalozinke(lozinka) : null;
+  const strength = password ? jacinalozinke(password) : null;
 
   return (
     <div className={styles.wrap}>
 
-      {/* Leva — brand panel */}
       <aside className={styles.brand}>
         <div className={styles.brandLogo}>
           <div className={styles.brandIcon}>
@@ -147,12 +146,10 @@ export default function ResetPassword() {
         <div className={styles.brandFooter}></div>
       </aside>
 
-      {/* Desna — forma panel */}
       <main className={styles.formPanel}>
-        <StepIndicator korak={korak} />
+        <StepIndicator step={step} />
 
-        {/* Korak 1: Email */}
-        {korak === 1 && (
+        {step === 1 && (
           <div ref={cardRef} className={styles.card}>
             <h2 className={styles.formTitle}>Zaboravili ste lozinku?</h2>
             <p className={styles.formSubtitle}>
@@ -160,9 +157,9 @@ export default function ResetPassword() {
             </p>
             <div className={styles.divider} />
 
-            {greska && <Alert tip="greska" poruka={greska} />}
+            {error && <Alert tip="greska" poruka={error} />}
 
-            <form onSubmit={handleZahtev} noValidate>
+            <form onSubmit={handleRequest} noValidate>
               <div className={styles.field}>
                 <label htmlFor="email">Email adresa</label>
                 <input
@@ -176,12 +173,12 @@ export default function ResetPassword() {
                 />
               </div>
 
-              <button type="submit" disabled={saljem} className={styles.btnPrimary}>
+              <button type="submit" disabled={submitting} className={styles.btnPrimary}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="22" y1="2" x2="11" y2="13"/>
                   <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                 </svg>
-                {saljem ? 'Slanje...' : 'Pošalji link za resetovanje'}
+                {submitting ? 'Slanje...' : 'Pošalji link za resetovanje'}
               </button>
             </form>
 
@@ -191,8 +188,7 @@ export default function ResetPassword() {
           </div>
         )}
 
-        {/* Korak 2: Email poslat */}
-        {korak === 2 && (
+        {step === 2 && (
           <div ref={cardRef} className={styles.card}>
             <div className={styles.successCenter}>
               <div className={styles.successIcon}>
@@ -213,7 +209,7 @@ export default function ResetPassword() {
             <button
               type="button"
               className={styles.btnSecondary}
-              onClick={() => { setKorak(1); setGreska(null); }}
+              onClick={() => { setStep(1); setError(null); }}
             >
               Pošalji ponovo
             </button>
@@ -224,10 +220,9 @@ export default function ResetPassword() {
           </div>
         )}
 
-        {/* Korak 3: Nova lozinka */}
-        {korak === 3 && (
+        {step === 3 && (
           <div ref={cardRef} className={styles.card}>
-            {uspeh ? (
+            {success ? (
               <div className={styles.successCenter}>
                 <div className={styles.successIcon}>
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5">
@@ -248,7 +243,7 @@ export default function ResetPassword() {
                 </p>
                 <div className={styles.divider} />
 
-                {greska && <Alert tip="greska" poruka={greska} />}
+                {error && <Alert tip="greska" poruka={error} />}
 
                 <form onSubmit={handleReset} noValidate>
                   <div className={styles.field}>
@@ -258,20 +253,20 @@ export default function ResetPassword() {
                     <input
                       id="nova-lozinka"
                       type="password"
-                      value={lozinka}
-                      onChange={e => { setLozinka(e.target.value); setGreska(null); }}
-                      className={lozinka ? styles.hasValue : ''}
+                      value={password}
+                      onChange={e => { setPassword(e.target.value); setError(null); }}
+                      className={password ? styles.hasValue : ''}
                     />
-                    {jacina && (
+                    {strength && (
                       <div className={styles.pwStrength}>
                         <div className={styles.pwStrengthBar}>
                           <div
                             className={styles.pwStrengthFill}
-                            style={{ width: jacina.procenat, background: jacina.boja }}
+                            style={{ width: strength.procenat, background: strength.boja }}
                           />
                         </div>
-                        <span className={styles.pwStrengthLabel} style={{ color: jacina.boja }}>
-                          {jacina.naziv} lozinka
+                        <span className={styles.pwStrengthLabel} style={{ color: strength.boja }}>
+                          {strength.naziv} lozinka
                         </span>
                       </div>
                     )}
@@ -284,17 +279,17 @@ export default function ResetPassword() {
                     <input
                       id="potvrda-lozinke"
                       type="password"
-                      value={potvrda}
-                      onChange={e => { setPotvrda(e.target.value); setGreska(null); }}
-                      className={potvrda ? styles.hasValue : ''}
+                      value={confirm}
+                      onChange={e => { setConfirm(e.target.value); setError(null); }}
+                      className={confirm ? styles.hasValue : ''}
                     />
                   </div>
 
-                  <button type="submit" disabled={saljem} className={styles.btnPrimary}>
+                  <button type="submit" disabled={submitting} className={styles.btnPrimary}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
-                    {saljem ? 'Čuvanje...' : 'Potvrdi novu lozinku'}
+                    {submitting ? 'Čuvanje...' : 'Potvrdi novu lozinku'}
                   </button>
                 </form>
 

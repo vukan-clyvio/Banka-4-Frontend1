@@ -4,23 +4,31 @@ const DELAY = 600;
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-const FAKE_USER = {
-  id:       1,
-  ime:      'Petar',
-  prezime:  'Petrović',
-  email:    'petar.petrovic@rafbank.rs',
-  jeAdmin:  true,
+const FAKE_EMPLOYEE = {
+  employee_id:   1,
+  first_name:    'Petar',
+  last_name:     'Petrović',
+  email:         'petar.petrovic@rafbank.rs',
+  username:      'ppetrovic',
+  gender:        'M',
+  date_of_birth: '1985-03-15',
+  phone_number:  '+381601234567',
+  address:       'Knez Mihailova 10, Beograd',
+  department:    'Management',
+  position:      'Director',
+  active:        true,
+  is_admin:      true,
 };
 
-const FAKE_ZAPOSLENI = [
-  { id: 1, ime: 'Petar',   prezime: 'Petrović',  email: 'petar.petrovic@rafbank.rs',  pozicija: 'Direktor',          departman: 'Uprava',       aktivan: true },
-  { id: 2, ime: 'Ana',     prezime: 'Jovanović',  email: 'ana.jovanovic@rafbank.rs',   pozicija: 'Menadžer',          departman: 'Finansije',    aktivan: true },
-  { id: 3, ime: 'Marko',   prezime: 'Nikolić',    email: 'marko.nikolic@rafbank.rs',   pozicija: 'Programer',         departman: 'IT',           aktivan: true },
-  { id: 4, ime: 'Jelena',  prezime: 'Đorđević',   email: 'jelena.djordjevic@rafbank.rs', pozicija: 'Analitičar',     departman: 'Finansije',    aktivan: false },
-  { id: 5, ime: 'Stefan',  prezime: 'Popović',    email: 'stefan.popovic@rafbank.rs',  pozicija: 'Sistemski admin',   departman: 'IT',           aktivan: true },
-  { id: 6, ime: 'Milica',  prezime: 'Stanković',  email: 'milica.stankovic@rafbank.rs', pozicija: 'HR menadžer',     departman: 'HR',           aktivan: true },
-  { id: 7, ime: 'Nikola',  prezime: 'Ilić',       email: 'nikola.ilic@rafbank.rs',     pozicija: 'Tester',            departman: 'IT',           aktivan: false },
-  { id: 8, ime: 'Ivana',   prezime: 'Marković',   email: 'ivana.markovic@rafbank.rs',  pozicija: 'Računovođa',       departman: 'Finansije',    aktivan: true },
+const FAKE_EMPLOYEES = [
+  { employee_id: 1, first_name: 'Petar',   last_name: 'Petrović',  email: 'petar.petrovic@rafbank.rs',    username: 'ppetrovic',  position: 'Director',       department: 'Management', active: true,  gender: 'M', date_of_birth: '1985-03-15', phone_number: '+381601234567', address: 'Knez Mihailova 10' },
+  { employee_id: 2, first_name: 'Ana',     last_name: 'Jovanović', email: 'ana.jovanovic@rafbank.rs',     username: 'ajovanovic', position: 'Manager',        department: 'Finance',    active: true,  gender: 'F', date_of_birth: '1990-07-22', phone_number: '+381601234568', address: 'Bulevar Kralja Aleksandra 5' },
+  { employee_id: 3, first_name: 'Marko',   last_name: 'Nikolić',   email: 'marko.nikolic@rafbank.rs',     username: 'mnikolic',   position: 'Developer',      department: 'IT',         active: true,  gender: 'M', date_of_birth: '1992-11-03', phone_number: '+381601234569', address: 'Nemanjina 15' },
+  { employee_id: 4, first_name: 'Jelena',  last_name: 'Đorđević',  email: 'jelena.djordjevic@rafbank.rs', username: 'jdjordjevic', position: 'Analyst',        department: 'Finance',    active: false, gender: 'F', date_of_birth: '1988-01-10', phone_number: '+381601234570', address: 'Cara Dušana 20' },
+  { employee_id: 5, first_name: 'Stefan',  last_name: 'Popović',   email: 'stefan.popovic@rafbank.rs',    username: 'spopovic',   position: 'Sys Admin',      department: 'IT',         active: true,  gender: 'M', date_of_birth: '1995-05-18', phone_number: '+381601234571', address: 'Terazije 8' },
+  { employee_id: 6, first_name: 'Milica',  last_name: 'Stanković', email: 'milica.stankovic@rafbank.rs',  username: 'mstankovic', position: 'HR Manager',     department: 'HR',         active: true,  gender: 'F', date_of_birth: '1991-09-25', phone_number: '+381601234572', address: 'Savska 30' },
+  { employee_id: 7, first_name: 'Nikola',  last_name: 'Ilić',      email: 'nikola.ilic@rafbank.rs',       username: 'nilic',      position: 'Tester',         department: 'IT',         active: false, gender: 'M', date_of_birth: '1993-12-07', phone_number: '+381601234573', address: 'Vojvode Stepe 42' },
+  { employee_id: 8, first_name: 'Ivana',   last_name: 'Marković',  email: 'ivana.markovic@rafbank.rs',    username: 'imarkovic',  position: 'Accountant',     department: 'Finance',    active: true,  gender: 'F', date_of_birth: '1989-04-14', phone_number: '+381601234574', address: 'Balkanska 12' },
 ];
 
 api.interceptors.request.use(async config => {
@@ -31,101 +39,94 @@ api.interceptors.request.use(async config => {
   const path = url?.replace(import.meta.env.VITE_API_URL ?? '', '') ?? '';
 
   if (method === 'post' && path === '/auth/login') {
-    if (data.email && data.lozinka) {
+    if (data.username && data.password) {
       return throwFakeResponse(config, {
-        data: { user: FAKE_USER, token: 'fake-jwt-token-123', refreshToken: 'fake-refresh-token-456' },
-        message: 'Prijava uspešna',
+        access_token: 'fake-jwt-token-123',
+        expires_in:   3600,
+        employee:     FAKE_EMPLOYEE,
       });
     }
-    return throwFakeError(config, 401, 'Pogrešan email ili lozinka.');
+    return throwFakeError(config, 401, 'Pogrešan username ili lozinka.');
   }
 
-  if (method === 'post' && path === '/auth/refresh') {
-    return throwFakeResponse(config, {
-      data: { token: 'fake-jwt-refreshed-' + Date.now(), refreshToken: 'fake-refresh-' + Date.now() },
-    });
+  if (method === 'post' && path === '/auth/register') {
+    const novi = { employee_id: Date.now(), ...data };
+    FAKE_EMPLOYEES.push(novi);
+    return throwFakeResponse(config, { data: novi, message: 'Zaposleni je kreiran.' }, 201);
   }
 
-  if (method === 'post' && path === '/auth/promena-lozinke') {
-    return throwFakeResponse(config, { message: 'Lozinka je uspešno promenjena.' });
-  }
-
-  if (method === 'post' && path === '/auth/reset-zahtev') {
-    return throwFakeResponse(config, { message: 'Email je poslat.' });
-  }
-
-  if (method === 'post' && path === '/auth/reset-lozinka') {
-    return throwFakeResponse(config, { message: 'Lozinka je promenjena.' });
-  }
-
-  if (method === 'post' && path === '/auth/aktivacija') {
+  if (method === 'post' && path === '/auth/activate') {
     return throwFakeResponse(config, { message: 'Nalog je aktiviran.' });
   }
 
-  const idMatch = path.match(/^\/zaposleni\/(\d+)$/);
+  if (method === 'post' && path === '/auth/forgot-password') {
+    return throwFakeResponse(config, { message: 'Email je poslat.' });
+  }
+
+  if (method === 'post' && path === '/auth/reset-password') {
+    return throwFakeResponse(config, { message: 'Lozinka je promenjena.' });
+  }
+
+  if (method === 'post' && path === '/employees/change-password') {
+    return throwFakeResponse(config, { message: 'Lozinka je uspešno promenjena.' });
+  }
+
+  const idMatch = path.match(/^\/employees\/(\d+)$/);
 
   if (method === 'get' && idMatch) {
-    const zaposleni = FAKE_ZAPOSLENI.find(z => z.id === Number(idMatch[1]));
-    if (zaposleni) {
-      return throwFakeResponse(config, { data: zaposleni });
+    const emp = FAKE_EMPLOYEES.find(e => e.employee_id === Number(idMatch[1]));
+    if (emp) {
+      return throwFakeResponse(config, { data: emp });
     }
     return throwFakeError(config, 404, 'Zaposleni nije pronađen.');
   }
 
   if (method === 'put' && idMatch) {
-    const idx = FAKE_ZAPOSLENI.findIndex(z => z.id === Number(idMatch[1]));
+    const idx = FAKE_EMPLOYEES.findIndex(e => e.employee_id === Number(idMatch[1]));
     if (idx !== -1) {
-      Object.assign(FAKE_ZAPOSLENI[idx], data);
-      return throwFakeResponse(config, { data: FAKE_ZAPOSLENI[idx], message: 'Zaposleni je ažuriran.' });
+      Object.assign(FAKE_EMPLOYEES[idx], data);
+      return throwFakeResponse(config, { data: FAKE_EMPLOYEES[idx], message: 'Zaposleni je ažuriran.' });
     }
     return throwFakeError(config, 404, 'Zaposleni nije pronađen.');
   }
 
   if (method === 'delete' && idMatch) {
-    const idx = FAKE_ZAPOSLENI.findIndex(z => z.id === Number(idMatch[1]));
+    const idx = FAKE_EMPLOYEES.findIndex(e => e.employee_id === Number(idMatch[1]));
     if (idx !== -1) {
-      FAKE_ZAPOSLENI.splice(idx, 1);
+      FAKE_EMPLOYEES.splice(idx, 1);
       return throwFakeResponse(config, { message: 'Zaposleni je obrisan.' });
     }
     return throwFakeError(config, 404, 'Zaposleni nije pronađen.');
   }
 
-  if (method === 'get' && path === '/zaposleni') {
-    let filtered = [...FAKE_ZAPOSLENI];
+  if (method === 'get' && path === '/employees') {
+    let filtered = [...FAKE_EMPLOYEES];
 
-    if (params?.search) {
-      const s = params.search.toLowerCase();
-      filtered = filtered.filter(z =>
-        z.ime.toLowerCase().includes(s) ||
-        z.prezime.toLowerCase().includes(s) ||
-        z.email.toLowerCase().includes(s)
-      );
+    if (params?.email) {
+      filtered = filtered.filter(e => e.email.toLowerCase().includes(params.email.toLowerCase()));
     }
-    if (params?.status === 'aktivan')   filtered = filtered.filter(z => z.aktivan);
-    if (params?.status === 'neaktivan') filtered = filtered.filter(z => !z.aktivan);
-    if (params?.departman) filtered = filtered.filter(z => z.departman.toLowerCase().includes(params.departman.toLowerCase()));
-    if (params?.pozicija)  filtered = filtered.filter(z => z.pozicija.toLowerCase().includes(params.pozicija.toLowerCase()));
+    if (params?.first_name) {
+      filtered = filtered.filter(e => e.first_name.toLowerCase().includes(params.first_name.toLowerCase()));
+    }
+    if (params?.last_name) {
+      filtered = filtered.filter(e => e.last_name.toLowerCase().includes(params.last_name.toLowerCase()));
+    }
+    if (params?.position) {
+      filtered = filtered.filter(e => e.position.toLowerCase().includes(params.position.toLowerCase()));
+    }
 
-    const page  = Number(params?.page)  || 1;
-    const limit = Number(params?.limit) || 20;
-    const start = (page - 1) * limit;
-    const sliced = filtered.slice(start, start + limit);
+    const page      = Number(params?.page)      || 1;
+    const pageSize  = Number(params?.page_size)  || 20;
+    const start     = (page - 1) * pageSize;
+    const sliced    = filtered.slice(start, start + pageSize);
 
     return throwFakeResponse(config, {
-      data:  sliced,
-      total: filtered.length,
+      data:        sliced,
+      total:       filtered.length,
       page,
-      limit,
+      page_size:   pageSize,
+      total_pages: Math.ceil(filtered.length / pageSize),
     });
-  }
-
-  if (method === 'post' && path === '/zaposleni') {
-    const novi = { id: Date.now(), ...data };
-    FAKE_ZAPOSLENI.push(novi);
-    return throwFakeResponse(config, {
-      data: novi,
-      message: 'Zaposleni je kreiran.',
-    }, 201);
   }
 
   return config;

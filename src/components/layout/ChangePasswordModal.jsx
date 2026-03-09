@@ -1,25 +1,25 @@
 import { useState, useEffect } from 'react';
-import { authApi }             from '../../api/endpoints/auth';
+import { employeesApi }        from '../../api/endpoints/employees';
 import { validirajLozinku, sePoklapa, jacinalozinke } from '../../utils/helpers';
 import Alert                   from '../ui/Alert';
 import styles                  from './ChangePasswordModal.module.css';
 
 export default function ChangePasswordModal({ open, onClose }) {
-  const [trenutna, setTrenutna] = useState('');
-  const [nova,     setNova]     = useState('');
-  const [potvrda,  setPotvrda]  = useState('');
-  const [greska,   setGreska]   = useState(null);
-  const [saljem,   setSaljem]   = useState(false);
-  const [uspeh,    setUspeh]    = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirm,     setConfirm]     = useState('');
+  const [error,       setError]       = useState(null);
+  const [submitting,  setSubmitting]  = useState(false);
+  const [success,     setSuccess]     = useState(false);
 
   useEffect(() => {
     if (!open) {
-      setTrenutna('');
-      setNova('');
-      setPotvrda('');
-      setGreska(null);
-      setSaljem(false);
-      setUspeh(false);
+      setOldPassword('');
+      setNewPassword('');
+      setConfirm('');
+      setError(null);
+      setSubmitting(false);
+      setSuccess(false);
     }
   }, [open]);
 
@@ -28,34 +28,33 @@ export default function ChangePasswordModal({ open, onClose }) {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!trenutna.trim()) { setGreska('Unesite trenutnu lozinku.'); return; }
-    const novaGreska = validirajLozinku(nova);
-    if (novaGreska) { setGreska(novaGreska); return; }
-    const poklapaGreska = sePoklapa(nova, potvrda, 'Lozinke se ne poklapaju');
-    if (poklapaGreska) { setGreska(poklapaGreska); return; }
+    if (!oldPassword.trim()) { setError('Unesite trenutnu lozinku.'); return; }
+    const pwError = validirajLozinku(newPassword);
+    if (pwError) { setError(pwError); return; }
+    const matchError = sePoklapa(newPassword, confirm, 'Lozinke se ne poklapaju');
+    if (matchError) { setError(matchError); return; }
 
-    setSaljem(true);
-    setGreska(null);
+    setSubmitting(true);
+    setError(null);
     try {
-      await authApi.changePassword({
-        trenutnaLozinka: trenutna,
-        novaLozinka:     nova,
-        potvrdaLozinke:  potvrda,
+      await employeesApi.changePassword({
+        old_password: oldPassword,
+        new_password: newPassword,
       });
-      setUspeh(true);
+      setSuccess(true);
     } catch (err) {
-      setGreska(err.error ?? 'Greška pri promeni lozinke.');
+      setError(err.error ?? 'Greška pri promeni lozinke.');
     } finally {
-      setSaljem(false);
+      setSubmitting(false);
     }
   }
 
-  const jacina = nova ? jacinalozinke(nova) : null;
+  const strength = newPassword ? jacinalozinke(newPassword) : null;
 
   return (
     <div className={styles.backdrop} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
-        {uspeh ? (
+        {success ? (
           <div className={styles.successCenter}>
             <div className={styles.successIcon}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5">
@@ -74,7 +73,7 @@ export default function ChangePasswordModal({ open, onClose }) {
             <p className={styles.subtitle}>Unesite trenutnu i novu lozinku.</p>
             <div className={styles.divider} />
 
-            {greska && <Alert tip="greska" poruka={greska} />}
+            {error && <Alert tip="greska" poruka={error} />}
 
             <form onSubmit={handleSubmit} noValidate>
               <div className={styles.field}>
@@ -83,9 +82,9 @@ export default function ChangePasswordModal({ open, onClose }) {
                 </label>
                 <input
                   type="password"
-                  value={trenutna}
-                  onChange={e => { setTrenutna(e.target.value); setGreska(null); }}
-                  className={trenutna ? styles.hasValue : ''}
+                  value={oldPassword}
+                  onChange={e => { setOldPassword(e.target.value); setError(null); }}
+                  className={oldPassword ? styles.hasValue : ''}
                   autoComplete="current-password"
                 />
               </div>
@@ -96,21 +95,21 @@ export default function ChangePasswordModal({ open, onClose }) {
                 </label>
                 <input
                   type="password"
-                  value={nova}
-                  onChange={e => { setNova(e.target.value); setGreska(null); }}
-                  className={nova ? styles.hasValue : ''}
+                  value={newPassword}
+                  onChange={e => { setNewPassword(e.target.value); setError(null); }}
+                  className={newPassword ? styles.hasValue : ''}
                   autoComplete="new-password"
                 />
-                {jacina && (
+                {strength && (
                   <div className={styles.pwStrength}>
                     <div className={styles.pwStrengthBar}>
                       <div
                         className={styles.pwStrengthFill}
-                        style={{ width: jacina.procenat, background: jacina.boja }}
+                        style={{ width: strength.procenat, background: strength.boja }}
                       />
                     </div>
-                    <span className={styles.pwStrengthLabel} style={{ color: jacina.boja }}>
-                      {jacina.naziv} lozinka
+                    <span className={styles.pwStrengthLabel} style={{ color: strength.boja }}>
+                      {strength.naziv} lozinka
                     </span>
                   </div>
                 )}
@@ -122,9 +121,9 @@ export default function ChangePasswordModal({ open, onClose }) {
                 </label>
                 <input
                   type="password"
-                  value={potvrda}
-                  onChange={e => { setPotvrda(e.target.value); setGreska(null); }}
-                  className={potvrda ? styles.hasValue : ''}
+                  value={confirm}
+                  onChange={e => { setConfirm(e.target.value); setError(null); }}
+                  className={confirm ? styles.hasValue : ''}
                   autoComplete="new-password"
                 />
               </div>
@@ -133,8 +132,8 @@ export default function ChangePasswordModal({ open, onClose }) {
                 <button type="button" className={styles.btnGhost} onClick={onClose}>
                   Otkaži
                 </button>
-                <button type="submit" disabled={saljem} className={styles.btnPrimary}>
-                  {saljem ? 'Čuvanje...' : 'Promeni lozinku'}
+                <button type="submit" disabled={submitting} className={styles.btnPrimary}>
+                  {submitting ? 'Čuvanje...' : 'Promeni lozinku'}
                 </button>
               </div>
             </form>

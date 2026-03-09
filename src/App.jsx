@@ -17,7 +17,7 @@ function ProtectedRoute({ children }) {
 
 function AdminRoute({ children }) {
   const user = useAuthStore(s => s.user);
-  if (!user?.jeAdmin) return <Navigate to="/" replace />;
+  if (!user?.is_admin) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -25,12 +25,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public routes */}
         <Route path="/login"            element={<Login />} />
         <Route path="/reset-password"   element={<ResetPassword />} />
         <Route path="/activation"       element={<AccountActivation />} />
 
-        {/* Protected routes */}
         <Route path="/" element={
           <ProtectedRoute><Dashboard /></ProtectedRoute>
         } />
@@ -44,7 +42,6 @@ export default function App() {
           <ProtectedRoute><EmployeeDetails /></ProtectedRoute>
         } />
 
-        {/* Fallback */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

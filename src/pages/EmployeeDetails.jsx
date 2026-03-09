@@ -10,7 +10,7 @@ import Spinner                                 from '../components/ui/Spinner';
 import Alert                                   from '../components/ui/Alert';
 import styles                                  from './EmployeeDetails.module.css';
 
-const POL_OPCIJE = ['Muški', 'Ženski', 'Ne želim da navedem'];
+const GENDER_OPTIONS = ['M', 'F'];
 
 export default function EmployeeDetails() {
   const { id }   = useParams();
@@ -23,11 +23,11 @@ export default function EmployeeDetails() {
     [id]
   );
 
-  const [editMode,  setEditMode]  = useState(false);
-  const [forma,     setForma]     = useState(null);
-  const [greske,    setGreske]    = useState({});
-  const [apiGreska, setApiGreska] = useState(null);
-  const [saljem,    setSaljem]    = useState(false);
+  const [editMode,   setEditMode]   = useState(false);
+  const [form,       setForm]       = useState(null);
+  const [errors,     setErrors]     = useState({});
+  const [apiError,   setApiError]   = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -43,64 +43,64 @@ export default function EmployeeDetails() {
   }, []);
 
   function startEdit() {
-    const z = data.data;
-    setForma({
-      ime:           z.ime ?? '',
-      prezime:       z.prezime ?? '',
-      email:         z.email ?? '',
-      telefon:       z.telefon ?? '',
-      adresa:        z.adresa ?? '',
-      datumRodjenja: z.datumRodjenja ?? '',
-      pol:           z.pol ?? '',
-      aktivan:       z.aktivan ?? true,
-      pozicija:      z.pozicija ?? '',
-      departman:     z.departman ?? '',
+    const emp = data.data;
+    setForm({
+      first_name:    emp.first_name ?? '',
+      last_name:     emp.last_name ?? '',
+      email:         emp.email ?? '',
+      phone_number:  emp.phone_number ?? '',
+      address:       emp.address ?? '',
+      date_of_birth: emp.date_of_birth ?? '',
+      gender:        emp.gender ?? '',
+      active:        emp.active ?? true,
+      position:      emp.position ?? '',
+      department:    emp.department ?? '',
     });
-    setGreske({});
-    setApiGreska(null);
+    setErrors({});
+    setApiError(null);
     setEditMode(true);
   }
 
   function cancelEdit() {
     setEditMode(false);
-    setForma(null);
-    setGreske({});
-    setApiGreska(null);
+    setForm(null);
+    setErrors({});
+    setApiError(null);
   }
 
   function updateField(key, value) {
-    setForma(prev => ({ ...prev, [key]: value }));
-    if (greske[key]) setGreske(prev => ({ ...prev, [key]: null }));
+    setForm(prev => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors(prev => ({ ...prev, [key]: null }));
   }
 
   function validate() {
-    const n = {};
-    const g = (k, e) => { if (e) n[k] = e; };
-    g('ime',      jeObavezno(forma.ime));
-    g('prezime',  jeObavezno(forma.prezime));
-    g('email',    jeObavezno(forma.email) ?? jeValidanEmail(forma.email));
-    g('pozicija', jeObavezno(forma.pozicija));
-    g('departman',jeObavezno(forma.departman));
-    if (forma.telefon && jeValidanTelefon(forma.telefon)) {
-      n.telefon = jeValidanTelefon(forma.telefon);
+    const e = {};
+    const check = (k, err) => { if (err) e[k] = err; };
+    check('first_name', jeObavezno(form.first_name));
+    check('last_name',  jeObavezno(form.last_name));
+    check('email',      jeObavezno(form.email) ?? jeValidanEmail(form.email));
+    check('position',   jeObavezno(form.position));
+    check('department', jeObavezno(form.department));
+    if (form.phone_number && jeValidanTelefon(form.phone_number)) {
+      e.phone_number = jeValidanTelefon(form.phone_number);
     }
-    setGreske(n);
-    return Object.keys(n).length === 0;
+    setErrors(e);
+    return Object.keys(e).length === 0;
   }
 
   async function handleSave(e) {
     e.preventDefault();
     if (!validate()) return;
-    setSaljem(true);
-    setApiGreska(null);
+    setSubmitting(true);
+    setApiError(null);
     try {
-      await employeesApi.update(id, forma);
+      await employeesApi.update(id, form);
       setEditMode(false);
       refetch();
     } catch (err) {
-      setApiGreska(err.error ?? 'Greška pri čuvanju.');
+      setApiError(err.error ?? 'Greška pri čuvanju.');
     } finally {
-      setSaljem(false);
+      setSubmitting(false);
     }
   }
 
@@ -110,7 +110,7 @@ export default function EmployeeDetails() {
       await employeesApi.remove(id);
       navigate('/employees');
     } catch (err) {
-      setApiGreska(err.error ?? 'Greška pri brisanju.');
+      setApiError(err.error ?? 'Greška pri brisanju.');
     }
   }
 
@@ -118,7 +118,7 @@ export default function EmployeeDetails() {
   if (error)   return <><Navbar /><Alert tip="greska" poruka={error.error ?? 'Greška.'} /></>;
   if (!data?.data) return <><Navbar /><Alert tip="greska" poruka="Zaposleni nije pronađen." /></>;
 
-  const z = data.data;
+  const emp = data.data;
 
   return (
     <div ref={pageRef} className={styles.stranica}>
@@ -129,14 +129,14 @@ export default function EmployeeDetails() {
           <div className={styles.breadcrumb}>
             <Link to="/employees" className={styles.breadcrumbLink}>Zaposleni</Link>
             <span className={styles.breadcrumbSep}>›</span>
-            <span className={styles.breadcrumbActive}>{z.ime} {z.prezime}</span>
+            <span className={styles.breadcrumbActive}>{emp.first_name} {emp.last_name}</span>
           </div>
           <div className={styles.pageHeader}>
             <div>
-              <h1 className={styles.pageTitle}>{z.ime} {z.prezime}</h1>
-              <p className={styles.pageDesc}>{z.pozicija} — {z.departman}</p>
+              <h1 className={styles.pageTitle}>{emp.first_name} {emp.last_name}</h1>
+              <p className={styles.pageDesc}>{emp.position} — {emp.department}</p>
             </div>
-            {user?.jeAdmin && !editMode && (
+            {user?.is_admin && !editMode && (
               <div className={styles.headerActions}>
                 <button className={styles.btnPrimary} onClick={startEdit}>
                   Izmeni
@@ -149,7 +149,7 @@ export default function EmployeeDetails() {
           </div>
         </div>
 
-        {apiGreska && <Alert tip="greska" poruka={apiGreska} />}
+        {apiError && <Alert tip="greska" poruka={apiError} />}
 
         <div className={`page-anim ${styles.detailCard}`}>
           {editMode ? (
@@ -157,28 +157,28 @@ export default function EmployeeDetails() {
               <div className={styles.section}>
                 <div className={styles.sectionTitle}>Lični podaci</div>
                 <div className={styles.fieldGrid}>
-                  <Field label="Ime" required error={greske.ime}>
-                    <input type="text" value={forma.ime} onChange={e => updateField('ime', e.target.value)} className={forma.ime ? styles.hasValue : ''} />
+                  <Field label="Ime" required error={errors.first_name}>
+                    <input type="text" value={form.first_name} onChange={e => updateField('first_name', e.target.value)} className={form.first_name ? styles.hasValue : ''} />
                   </Field>
-                  <Field label="Prezime" required error={greske.prezime}>
-                    <input type="text" value={forma.prezime} onChange={e => updateField('prezime', e.target.value)} className={forma.prezime ? styles.hasValue : ''} />
+                  <Field label="Prezime" required error={errors.last_name}>
+                    <input type="text" value={form.last_name} onChange={e => updateField('last_name', e.target.value)} className={form.last_name ? styles.hasValue : ''} />
                   </Field>
-                  <Field label="Email" required error={greske.email}>
-                    <input type="email" value={forma.email} onChange={e => updateField('email', e.target.value)} className={forma.email ? styles.hasValue : ''} />
+                  <Field label="Email" required error={errors.email}>
+                    <input type="email" value={form.email} onChange={e => updateField('email', e.target.value)} className={form.email ? styles.hasValue : ''} />
                   </Field>
-                  <Field label="Telefon" error={greske.telefon}>
-                    <input type="tel" value={forma.telefon} onChange={e => updateField('telefon', e.target.value)} className={forma.telefon ? styles.hasValue : ''} />
+                  <Field label="Telefon" error={errors.phone_number}>
+                    <input type="tel" value={form.phone_number} onChange={e => updateField('phone_number', e.target.value)} className={form.phone_number ? styles.hasValue : ''} />
                   </Field>
                   <Field label="Adresa">
-                    <input type="text" value={forma.adresa} onChange={e => updateField('adresa', e.target.value)} className={forma.adresa ? styles.hasValue : ''} />
+                    <input type="text" value={form.address} onChange={e => updateField('address', e.target.value)} className={form.address ? styles.hasValue : ''} />
                   </Field>
                   <Field label="Datum rođenja">
-                    <input type="date" value={forma.datumRodjenja} onChange={e => updateField('datumRodjenja', e.target.value)} className={forma.datumRodjenja ? styles.hasValue : ''} />
+                    <input type="date" value={form.date_of_birth} onChange={e => updateField('date_of_birth', e.target.value)} className={form.date_of_birth ? styles.hasValue : ''} />
                   </Field>
                   <Field label="Pol">
-                    <select value={forma.pol} onChange={e => updateField('pol', e.target.value)} className={forma.pol ? styles.hasValue : ''}>
+                    <select value={form.gender} onChange={e => updateField('gender', e.target.value)} className={form.gender ? styles.hasValue : ''}>
                       <option value="">Izaberite...</option>
-                      {POL_OPCIJE.map(o => <option key={o} value={o}>{o}</option>)}
+                      {GENDER_OPTIONS.map(o => <option key={o} value={o}>{o === 'M' ? 'Muški' : 'Ženski'}</option>)}
                     </select>
                   </Field>
                 </div>
@@ -187,19 +187,19 @@ export default function EmployeeDetails() {
               <div className={styles.section}>
                 <div className={styles.sectionTitle}>Radno mesto</div>
                 <div className={styles.fieldGrid}>
-                  <Field label="Pozicija" required error={greske.pozicija}>
-                    <input type="text" value={forma.pozicija} onChange={e => updateField('pozicija', e.target.value)} className={forma.pozicija ? styles.hasValue : ''} />
+                  <Field label="Pozicija" required error={errors.position}>
+                    <input type="text" value={form.position} onChange={e => updateField('position', e.target.value)} className={form.position ? styles.hasValue : ''} />
                   </Field>
-                  <Field label="Departman" required error={greske.departman}>
-                    <input type="text" value={forma.departman} onChange={e => updateField('departman', e.target.value)} className={forma.departman ? styles.hasValue : ''} />
+                  <Field label="Departman" required error={errors.department}>
+                    <input type="text" value={form.department} onChange={e => updateField('department', e.target.value)} className={form.department ? styles.hasValue : ''} />
                   </Field>
                 </div>
               </div>
 
               <div className={styles.formActions}>
                 <button type="button" className={styles.btnGhost} onClick={cancelEdit}>Otkaži</button>
-                <button type="submit" disabled={saljem} className={styles.btnPrimary}>
-                  {saljem ? 'Čuvanje...' : 'Sačuvaj izmene'}
+                <button type="submit" disabled={submitting} className={styles.btnPrimary}>
+                  {submitting ? 'Čuvanje...' : 'Sačuvaj izmene'}
                 </button>
               </div>
             </form>
@@ -208,17 +208,17 @@ export default function EmployeeDetails() {
               <div className={styles.section}>
                 <div className={styles.sectionTitle}>Lični podaci</div>
                 <div className={styles.fieldGrid}>
-                  <ViewField label="Ime" value={z.ime} />
-                  <ViewField label="Prezime" value={z.prezime} />
-                  <ViewField label="Email" value={z.email} />
-                  <ViewField label="Telefon" value={z.telefon || '—'} />
-                  <ViewField label="Adresa" value={z.adresa || '—'} />
-                  <ViewField label="Datum rođenja" value={z.datumRodjenja || '—'} />
-                  <ViewField label="Pol" value={z.pol || '—'} />
+                  <ViewField label="Ime" value={emp.first_name} />
+                  <ViewField label="Prezime" value={emp.last_name} />
+                  <ViewField label="Email" value={emp.email} />
+                  <ViewField label="Telefon" value={emp.phone_number || '—'} />
+                  <ViewField label="Adresa" value={emp.address || '—'} />
+                  <ViewField label="Datum rođenja" value={emp.date_of_birth || '—'} />
+                  <ViewField label="Pol" value={emp.gender === 'M' ? 'Muški' : emp.gender === 'F' ? 'Ženski' : '—'} />
                   <div>
                     <div className={styles.fieldLabel}>Status</div>
-                    <span className={`${styles.badge} ${z.aktivan ? styles.badgeActive : styles.badgeInactive}`}>
-                      {z.aktivan ? 'Aktivan' : 'Neaktivan'}
+                    <span className={`${styles.badge} ${emp.active ? styles.badgeActive : styles.badgeInactive}`}>
+                      {emp.active ? 'Aktivan' : 'Neaktivan'}
                     </span>
                   </div>
                 </div>
@@ -227,8 +227,8 @@ export default function EmployeeDetails() {
               <div className={styles.section}>
                 <div className={styles.sectionTitle}>Radno mesto</div>
                 <div className={styles.fieldGrid}>
-                  <ViewField label="Pozicija" value={z.pozicija} />
-                  <ViewField label="Departman" value={z.departman} />
+                  <ViewField label="Pozicija" value={emp.position} />
+                  <ViewField label="Departman" value={emp.department} />
                 </div>
               </div>
             </>
