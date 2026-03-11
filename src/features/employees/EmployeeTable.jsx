@@ -13,7 +13,7 @@ export default function EmployeeTable({ employees, onRowClick }) {
             <th>Ime</th>
             <th>Prezime</th>
             <th>Email</th>
-            <th>Pozicija</th>
+            <th>ID Pozicije</th>
             <th>Departman</th>
             <th>Status</th>
           </tr>
@@ -24,7 +24,7 @@ export default function EmployeeTable({ employees, onRowClick }) {
               <td className={styles.name}>{emp.first_name}</td>
               <td className={styles.name}>{emp.last_name}</td>
               <td className={styles.email}>{emp.email}</td>
-              <td>{emp.position}</td>
+              <td>{emp.position_id}</td>
               <td>{emp.department}</td>
               <td>
                 <span className={`${styles.badge} ${emp.active ? styles.badgeActive : styles.badgeInactive}`}>

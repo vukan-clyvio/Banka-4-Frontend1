@@ -53,7 +53,7 @@ export default function EmployeeDetails() {
       date_of_birth: emp.date_of_birth ?? '',
       gender:        emp.gender ?? '',
       active:        emp.active ?? true,
-      position:      emp.position ?? '',
+      position_id:   emp.position_id ?? '',
       department:    emp.department ?? '',
     });
     setErrors({});
@@ -79,7 +79,7 @@ export default function EmployeeDetails() {
     check('first_name', jeObavezno(form.first_name));
     check('last_name',  jeObavezno(form.last_name));
     check('email',      jeObavezno(form.email) ?? jeValidanEmail(form.email));
-    check('position',   jeObavezno(form.position));
+    check('position_id', jeObavezno(form.position_id));
     check('department', jeObavezno(form.department));
     if (form.phone_number && jeValidanTelefon(form.phone_number)) {
       e.phone_number = jeValidanTelefon(form.phone_number);
@@ -134,7 +134,7 @@ export default function EmployeeDetails() {
           <div className={styles.pageHeader}>
             <div>
               <h1 className={styles.pageTitle}>{emp.first_name} {emp.last_name}</h1>
-              <p className={styles.pageDesc}>{emp.position} — {emp.department}</p>
+              <p className={styles.pageDesc}>ID Pozicije: {emp.position_id} — {emp.department}</p>
             </div>
             {user?.is_admin && !editMode && (
               <div className={styles.headerActions}>
@@ -187,8 +187,8 @@ export default function EmployeeDetails() {
               <div className={styles.section}>
                 <div className={styles.sectionTitle}>Radno mesto</div>
                 <div className={styles.fieldGrid}>
-                  <Field label="Pozicija" required error={errors.position}>
-                    <input type="text" value={form.position} onChange={e => updateField('position', e.target.value)} className={form.position ? styles.hasValue : ''} />
+                  <Field label="ID Pozicije" required error={errors.position_id}>
+                    <input type="number" value={form.position_id} onChange={e => updateField('position_id', e.target.value)} className={form.position_id ? styles.hasValue : ''} />
                   </Field>
                   <Field label="Departman" required error={errors.department}>
                     <input type="text" value={form.department} onChange={e => updateField('department', e.target.value)} className={form.department ? styles.hasValue : ''} />
@@ -227,7 +227,7 @@ export default function EmployeeDetails() {
               <div className={styles.section}>
                 <div className={styles.sectionTitle}>Radno mesto</div>
                 <div className={styles.fieldGrid}>
-                  <ViewField label="Pozicija" value={emp.position} />
+                  <ViewField label="ID Pozicije" value={emp.position_id} />
                   <ViewField label="Departman" value={emp.department} />
                 </div>
               </div>

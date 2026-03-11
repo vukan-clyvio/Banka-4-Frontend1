@@ -22,10 +22,9 @@ export default function NewEmployee() {
     date_of_birth: '',
     gender:        '',
     active:        true,
-    position:      '',
+    position_id:   '',
     department:    '',
     username:      '',
-    password:      '',
   });
 
   const [errors,     setErrors]     = useState({});
@@ -69,10 +68,9 @@ export default function NewEmployee() {
     check('email',         jeObavezno(form.email) ?? jeValidanEmail(form.email));
     check('date_of_birth', jeObavezno(form.date_of_birth));
     check('gender',        jeObavezno(form.gender));
-    check('position',      jeObavezno(form.position));
+    check('position_id',   jeObavezno(form.position_id));
     check('department',    jeObavezno(form.department));
     check('username',      jeObavezno(form.username));
-    check('password',      jeObavezno(form.password));
 
     if (form.phone_number && jeValidanTelefon(form.phone_number)) {
       e.phone_number = jeValidanTelefon(form.phone_number);
@@ -240,12 +238,12 @@ export default function NewEmployee() {
               </div>
 
               <div className={styles.fieldGrid2}>
-                <Polje label="Pozicija" required greska={errors.position}>
+                <Polje label="ID Pozicije" required greska={errors.position_id}>
                   <input
-                    type="text"
-                    value={form.position}
-                    onChange={e => updateField('position', e.target.value)}
-                    className={form.position ? styles.hasValue : ''}
+                    type="number"
+                    value={form.position_id}
+                    onChange={e => updateField('position_id', e.target.value)}
+                    className={form.position_id ? styles.hasValue : ''}
                   />
                 </Polje>
 
@@ -283,24 +281,6 @@ export default function NewEmployee() {
                     <span className={styles.inputBadge}>Auto-gen</span>
                   </div>
                 </Polje>
-
-                <Polje label="Lozinka" required greska={errors.password}>
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={e => updateField('password', e.target.value)}
-                    className={form.password ? styles.hasValue : ''}
-                    autoComplete="new-password"
-                  />
-                </Polje>
-              </div>
-
-              <div className={styles.field} style={{ marginTop: 16 }}>
-                <div className={styles.pwConstraints}>
-                  {['Min. 8 karaktera', 'Max. 32 karaktera', '≥ 2 broja', '1 veliko slovo', '1 malo slovo'].map(t => (
-                    <span key={t} className={styles.pwTag}>{t}</span>
-                  ))}
-                </div>
               </div>
             </div>
 
@@ -333,7 +313,7 @@ export default function NewEmployee() {
                 {[
                   { bold: 'Email mora biti jedinstven', rest: ' — dva naloga ne mogu imati isti email' },
                   { bold: 'Username', rest: ' se auto-generiše iz imena, ali ga možete izmeniti' },
-                  { bold: 'Lozinka je obavezna', rest: ' — mora ispunjavati pravila jačine' },
+                  { bold: 'Aktivacija putem emaila', rest: ' — zaposleni postavlja lozinku preko aktivacionog linka' },
                   { bold: 'Permisije', rest: ' se dodeljuju nakon kreiranja iz profila zaposlenog' },
                 ].map((item, i) => (
                   <div key={i} className={styles.infoItem}>
