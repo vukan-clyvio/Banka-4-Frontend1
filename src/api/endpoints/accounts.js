@@ -1,9 +1,10 @@
 import api from '../client';
 
 export const accountsApi = {
-  searchClient: (q) => api.get('/clients/search', { params: { q } }),
-
-  createClient: (data) => api.post('/clients', data),
-
-  createAccount: (data) => api.post('/accounts', data),
+  getMyAccounts:   ()              => api.get('/accounts'),
+  getById:         (id)            => api.get(`/accounts/${id}`),
+  getTransactions: (accountId)     => api.get(`/accounts/${accountId}/transactions`),
+  updateName:      (id, name)      => api.patch(`/accounts/${id}`, { name }),
+  updateLimits:    (id, data)      => api.patch(`/accounts/${id}`, data),
+  createPayment:   (data)          => api.post('/payments', data),
 };
