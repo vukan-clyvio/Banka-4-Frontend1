@@ -8,6 +8,9 @@ import EmployeeList        from './pages/EmployeeList';
 import NewEmployee         from './pages/NewEmployee';
 import EmployeeDetails     from './pages/EmployeeDetails';
 import NotFound            from './pages/NotFound';
+import CreateTransfer from './features/transfers/CreateTransfer';
+import ConfirmTransfer from './features/transfers/ConfirmTransfer';
+import TransfersHistory from './features/transfers/TransfersHistory';
 
 function ProtectedRoute({ children }) {
   const token = useAuthStore(s => s.token);
@@ -43,6 +46,10 @@ export default function App() {
         <Route path="/employees/:id" element={
           <ProtectedRoute><PermissionRoute permission="employee.view"><EmployeeDetails /></PermissionRoute></ProtectedRoute>
         } />
+
+          <Route path="/transfers/new" element={<ProtectedRoute><CreateTransfer /></ProtectedRoute>} />
+          <Route path="/transfers/confirm" element={<ProtectedRoute><ConfirmTransfer /></ProtectedRoute>} />
+          <Route path="/transfers/history" element={<ProtectedRoute><TransfersHistory /></ProtectedRoute>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
