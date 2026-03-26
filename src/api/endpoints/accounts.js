@@ -1,24 +1,21 @@
-import { bankingApi as api } from '../client';
+import api, { bankingApi } from '../client';
 
 export const accountsApi = {
-  // Employee: list all accounts (paginated, filterable)
-  getAll: (params) => api.get('/accounts', { params }),
+  getAll: (params) => bankingApi.get('/accounts', { params }),
 
-  // Employee: search client by JMBG or email
-  searchClient: (query) => api.get('/clients/search', { params: { query } }),
+  // ✅ traži klijenta na user servisu (8080)
+  searchClient: (email) =>
+      api.get('/clients', { params: { email, page: 1, page_size: 1 } }),
 
-  // Employee: create new bank account
-  create: (data) => api.post('/accounts', data),
+  // ✅ kreira račun na banking servisu (8081)
+  create: (data) => bankingApi.post('/accounts', data),
 
-  // Update account name
   updateName: (clientId, accountNumber, name) =>
-    api.put(`/clients/${clientId}/accounts/${accountNumber}/name`, { name }),
+      bankingApi.put(`/clients/${clientId}/accounts/${accountNumber}/name`, { name }),
 
-  // Request limit change (sends OTP to client)
   requestLimitChange: (clientId, accountNumber, data) =>
-    api.post(`/clients/${clientId}/accounts/${accountNumber}/limits/request`, data),
+      bankingApi.post(`/clients/${clientId}/accounts/${accountNumber}/limits/request`, data),
 
-  // Confirm limit change with OTP code
   confirmLimitChange: (clientId, accountNumber, data) =>
-    api.put(`/clients/${clientId}/accounts/${accountNumber}/limits`, data),
+      bankingApi.put(`/clients/${clientId}/accounts/${accountNumber}/limits`, data),
 };
