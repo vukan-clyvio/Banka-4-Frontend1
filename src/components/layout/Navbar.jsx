@@ -102,6 +102,15 @@ export default function Navbar() {
             </NavLink>
           )}
 
+          {can('employee.view') && (
+            <NavLink
+              to="/client/securities"
+              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+            >
+              Hartije
+            </NavLink>
+          )}
+
 
 
           {can('account.create') && (

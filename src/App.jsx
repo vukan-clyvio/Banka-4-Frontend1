@@ -33,7 +33,8 @@ import ClientRecipients      from './pages/client/ClientRecipients';
 import ClientTransfers       from './pages/client/ClientTransfers';
 import ClientTransferHistory from './pages/client/ClientTransferHistory'; // ── NOVO ──
 import ClientPaymentOverview from './pages/client/ClientPaymentOverview';
-import NewPayment            from './pages/client/NewPayment';
+import NewPayment       from './pages/client/NewPayment';
+import ClientSecurities from './pages/client/ClientSecurities';
 
 // Shared
 import NotFound from './pages/NotFound';
@@ -107,7 +108,7 @@ export default function App() {
         <Route path="/client/recipients"   element={<ProtectedRoute><ClientRoute><ClientRecipients /></ClientRoute></ProtectedRoute>} />
         <Route path="/transfers/new"       element={<ProtectedRoute><ClientRoute><CreateTransfer  /></ClientRoute></ProtectedRoute>} />
         <Route path="/transfers/confirm"   element={<ProtectedRoute><ClientRoute><ConfirmTransfer /></ClientRoute></ProtectedRoute>} />
-        {/* ── NOVO ── */}
+        <Route path="/client/securities" element={<ProtectedRoute><ClientRoute><ClientSecurities /></ClientRoute></ProtectedRoute>} />
         <Route path="/transfers/history"   element={<ProtectedRoute><ClientRoute><ClientTransferHistory /></ClientRoute></ProtectedRoute>} />
 
         {/* ADMIN/EMPLOYEE RUTE */}
