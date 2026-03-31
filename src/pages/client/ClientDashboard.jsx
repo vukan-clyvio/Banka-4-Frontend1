@@ -1,18 +1,20 @@
-import { useRef, useLayoutEffect, useState, useEffect } from 'react';
-import { useNavigate }    from 'react-router-dom';
-import gsap               from 'gsap';
-import { clientApi }      from '../../api/endpoints/client';
-import { exchangeApi }   from '../../api/endpoints/exchange';
-import { paymentsApi }   from '../../api/endpoints/payments';
-import { useAuthStore }   from '../../store/authStore';
-import { useFetch }       from '../../hooks/useFetch';
-import Spinner            from '../../components/ui/Spinner';
-import styles             from './ClientDashboard.module.css';
+import { useRef, useLayoutEffect, useState } from 'react';
+import { useNavigate }  from 'react-router-dom';
+import gsap             from 'gsap';
+import { clientApi }    from '../../api/endpoints/client';
+import { exchangeApi }  from '../../api/endpoints/exchange';
+import { transfersApi } from '../../api/endpoints/transfers';
+import { useAuthStore } from '../../store/authStore';
+import { useFetch }     from '../../hooks/useFetch';
+import Spinner          from '../../components/ui/Spinner';
+import ClientHeader     from '../../components/layout/ClientHeader';
+import styles           from './ClientDashboard.module.css';
 
 function formatAmount(amount, currency = 'RSD') {
   return new Intl.NumberFormat('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(amount)) + ' ' + currency;
 }
 function formatDate(dateStr) {
+  if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('sr-RS', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
@@ -118,53 +120,36 @@ export default function ClientDashboard() {
   const pageRef  = useRef(null);
   const navigate = useNavigate();
   const user     = useAuthStore(s => s.user);
-  const logout   = useAuthStore(s => s.logout);
 
-  const [selectedAccount, setSelectedAccount] = useState(0);
-  const [calcAmount, setCalcAmount] = useState('');
-  const [calcFrom,   setCalcFrom]   = useState('EUR');
-  const [calcResult, setCalcResult] = useState('');
+  const [selectedAccount,  setSelectedAccount]  = useState(0);
+  const [calcAmount,       setCalcAmount]       = useState('');
+  const [calcFrom,         setCalcFrom]         = useState('EUR');
+  const [calcResult,       setCalcResult]       = useState('');
   const [showProfile,      setShowProfile]      = useState(false);
   const [showSwitcher,     setShowSwitcher]     = useState(false);
   const [paymentRecipient, setPaymentRecipient] = useState(null);
   const [showPayment,      setShowPayment]      = useState(false);
-  const [showPaymentsMenu, setShowPaymentsMenu] = useState(false);
-  const paymentsMenuRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (paymentsMenuRef.current && !paymentsMenuRef.current.contains(e.target)) {
-        setShowPaymentsMenu(false);
-      }
-    }
-    if (showPaymentsMenu) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showPaymentsMenu]);
 
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
 
-  const { data: accountsData,  loading: loadingAccounts } = useFetch(() => clientApi.getAccounts(clientId), [clientId]);
-
-  const accounts     = Array.isArray(accountsData) ? accountsData : accountsData?.data ?? [];
-
-  const activeAccount = accounts[selectedAccount];
-  const activeAccountNumber = activeAccount?.account_number ?? activeAccount?.number ?? '';
-
-  // Poslednje transakcije za selektovani račun
-  const { data: txData, loading: loadingTx } = useFetch(
-    () => clientId && activeAccountNumber
-      ? paymentsApi.getByAccount(clientId, activeAccountNumber, { page: 1, page_size: 5 })
-      : Promise.resolve(null),
-    [clientId, activeAccountNumber]
+  const { data: accountsData, loading: loadingAccounts } = useFetch(
+    () => clientApi.getAccounts(clientId),
+    [clientId]
   );
-  const transactions = Array.isArray(txData) ? txData : txData?.data ?? [];
+  const accounts    = Array.isArray(accountsData) ? accountsData : accountsData?.data ?? [];
+  const activeAccount = accounts[selectedAccount];
 
-  // Sačuvani primaoci
+  const { data: txData, loading: loadingTx } = useFetch(
+    () => transfersApi.getHistory(clientId, { page: 1, page_size: 5 }),
+    [clientId]
+  );
+  const transactions = txData?.data ?? (Array.isArray(txData) ? txData : []);
+
   const { data: payeesData } = useFetch(() => clientApi.getPayees(), []);
   const recipients = Array.isArray(payeesData) ? payeesData : payeesData?.data ?? [];
 
   const { data: ratesData } = useFetch(() => exchangeApi.getRates(), []);
-  const rates        = Array.isArray(ratesData?.rates) ? ratesData.rates : [];
+  const rates = Array.isArray(ratesData?.rates) ? ratesData.rates : [];
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -186,6 +171,7 @@ export default function ClientDashboard() {
     { label: 'Transferi',  path: '/client/transfers' },
     { label: 'Menjačnica', path: '/client/exchange' },
     { label: 'Kartice',    path: '/client/cards' },
+    { label: 'Hartije',    path: '/client/securities' },
     { label: 'Krediti',    path: '/client/loans' },
   ];
 
@@ -198,64 +184,7 @@ export default function ClientDashboard() {
 
   return (
     <div ref={pageRef} className={styles.page}>
-      <header className={styles.header}>
-        <button className={styles.headerBrand} onClick={() => navigate('/dashboard')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div className={styles.headerIcon}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-          </div>
-          <span className={styles.headerBrandText}>RAFBank</span>
-        </button>
-        <nav className={styles.headerNav}>
-          {navItems.map(item => (
-            <button key={item.label} className={styles.headerNavBtn} onClick={() => navigate(item.path)}>
-              {item.label}
-            </button>
-          ))}
-
-          {/* Plaćanja dropdown */}
-          <div className={styles.payDropdownWrap} ref={paymentsMenuRef}>
-            <button
-              className={`${styles.headerNavBtn} ${showPaymentsMenu ? styles.headerNavBtnActive : ''}`}
-              onClick={() => setShowPaymentsMenu(prev => !prev)}
-            >
-              Plaćanja
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 4 }}>
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </button>
-            {showPaymentsMenu && (
-              <div className={styles.payDropdownMenu}>
-                {paymentsSubItems.map(item => (
-                  <button
-                    key={item.label}
-                    className={styles.payDropdownItem}
-                    onClick={item.action ?? (() => { navigate(item.path); setShowPaymentsMenu(false); })}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </nav>
-        <div className={styles.headerRight}>
-          <button className={styles.headerProfile} onClick={() => setShowProfile(true)}>
-            <div className={styles.headerAvatar}>{user?.first_name?.[0]}{user?.last_name?.[0]}</div>
-            <span>{user?.first_name} {user?.last_name}</span>
-          </button>
-          <button className={styles.headerLogout} onClick={handleLogout}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            Odjavi se
-          </button>
-        </div>
-      </header>
+      <ClientHeader onProfileClick={() => setShowProfile(true)} />
 
       <div className={styles.content}>
         <div className={styles.welcome}>
@@ -291,30 +220,36 @@ export default function ClientDashboard() {
             )}
           </section>
 
-          {/* TRANSAKCIJE + ACCOUNT SWITCHER */}
+          {/* POSLEDNJI TRANSFERI */}
           <section className={`dash-card ${styles.card} ${styles.txCard}`}>
             <div className={styles.cardHeader}>
-              <h2 className={styles.cardTitle}>Poslednje transakcije</h2>
-              <button className={styles.switcherBtn} onClick={() => setShowSwitcher(true)} title="Promeni račun">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                  <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                </svg>
-                {activeAccount?.name ?? 'Račun'}
+              <h2 className={styles.cardTitle}>Poslednji transferi</h2>
+              <button className={styles.cardLink} onClick={() => navigate('/transfers/history')}>
+                Vidi sve →
               </button>
             </div>
             {loadingTx ? <Spinner /> : transactions.length === 0 ? (
-              <p style={{ color: 'var(--tx-3)', fontSize: 13, textAlign: 'center', padding: '2rem 0' }}>Nema transakcija za ovaj račun.</p>
+              <p style={{ color: 'var(--tx-3)', fontSize: 13, textAlign: 'center', padding: '2rem 0' }}>
+                Nema transfera za prikaz.
+              </p>
             ) : (
               <table className={styles.txTable}>
-                <thead><tr><th>Opis</th><th>Datum</th><th style={{ textAlign: 'right' }}>Iznos</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Sa računa</th>
+                    <th>Na račun</th>
+                    <th>Datum</th>
+                    <th style={{ textAlign: 'right' }}>Iznos</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {transactions.slice(0, 5).map(tx => (
-                    <tr key={tx.id ?? tx.payment_id}>
-                      <td>{tx.purpose ?? tx.description ?? '—'}</td>
-                      <td>{formatDate(tx.date ?? tx.created_at)}</td>
-                      <td className={tx.status === 'COMPLETED' || tx.type === 'credit' ? styles.credit : styles.debit}>
-                        {formatAmount(tx.amount, tx.currency)}
+                    <tr key={tx.transfer_id ?? tx.transaction_id}>
+                      <td>••••{String(tx.from_account_number ?? '').slice(-4)}</td>
+                      <td>••••{String(tx.to_account_number ?? '').slice(-4)}</td>
+                      <td>{formatDate(tx.created_at)}</td>
+                      <td className={styles.debit} style={{ textAlign: 'right' }}>
+                        -{formatAmount(tx.initial_amount)}
                       </td>
                     </tr>
                   ))}
@@ -334,10 +269,10 @@ export default function ClientDashboard() {
                 const name = r.name ?? `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim();
                 const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
                 return (
-                <button key={r.payee_id ?? r.id} className={styles.recipientBtn} onClick={() => navigate('/client/payments/new', { state: { recipient: { name, account: r.account_number } } })} title={`Plati ${name}`}>
-                  <div className={styles.recipientAvatar}>{initials}</div>
-                  <span className={styles.recipientName}>{name.split(' ')[0]}</span>
-                </button>
+                  <button key={r.payee_id ?? r.id} className={styles.recipientBtn} onClick={() => navigate('/client/payments/new', { state: { recipient: { name, account: r.account_number } } })} title={`Plati ${name}`}>
+                    <div className={styles.recipientAvatar}>{initials}</div>
+                    <span className={styles.recipientName}>{name.split(' ')[0]}</span>
+                  </button>
                 );
               })}
               {recipients.length === 0 && (
