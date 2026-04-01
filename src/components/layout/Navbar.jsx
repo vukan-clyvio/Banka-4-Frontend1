@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect }  from 'react';
 import { NavLink, useNavigate }         from 'react-router-dom';
 import { useAuthStore }                 from '../../store/authStore';
-import { usePermissions }              from '../../hooks/usePermissions';
+import { usePermissions }               from '../../hooks/usePermissions';
 import ChangePasswordModal              from './ChangePasswordModal';
 import styles                           from './Navbar.module.css';
 
@@ -18,7 +18,9 @@ export default function Navbar() {
 
   const menuRef  = useRef(null);
   const adminRef = useRef(null);
- 
+
+  const { isSupervisor } = usePermissions();
+  const canAccessSupervisorOrders = Boolean(isSupervisor); 
 
   useEffect(() => {
     function handleClick(e) {
@@ -111,7 +113,14 @@ export default function Navbar() {
             </NavLink>
           )}
 
-
+          {canAccessSupervisorOrders && (
+          <NavLink
+            to="/supervisor/orders"
+            className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+          >
+            Orderi
+          </NavLink>
+          )}
 
           {can('account.create') && (
             <NavLink

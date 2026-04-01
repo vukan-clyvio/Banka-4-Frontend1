@@ -2,6 +2,7 @@ import TaxPage from './pages/admin/TaxPage';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore }    from './store/authStore';
 import { useLayoutEffect } from 'react';
+import { usePermissions } from './hooks/usePermissions.js';
 
 // Auth pages
 import UnifiedLogin      from './pages/auth/UnifiedLogin';
@@ -49,6 +50,7 @@ import ConfirmTransfer from './features/transfers/ConfirmTransfer';
 import RatesList          from './features/exchange/RatesList.jsx';
 import CurrencyCalculator from './features/exchange/CurrencyCalculator.jsx';
 
+import SupervisorOrdersPage from './pages/supervisor/SupervisorOrdersPage.jsx';
 
 function ProtectedRoute({ children }) {
   const token = useAuthStore(s => s.token);
@@ -74,6 +76,12 @@ function EmployeeRoute({ children }) {
   return children;
 }
 
+function SupervisorRoute({ children }) {
+  const { isSupervisor } = usePermissions();
+  if (!isSupervisor) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
 export default function App() {
   const token = useAuthStore(s => s.token);
   const user  = useAuthStore(s => s.user);
@@ -87,6 +95,7 @@ export default function App() {
     if (!user)  return '/login';
     if (user.identity_type === 'client')   return '/dashboard';
     if (user.identity_type === 'employee') return '/admin';
+
     return '/login';
   };
 
@@ -139,6 +148,9 @@ export default function App() {
         } />
         <Route path="/employees/:id" element={
           <ProtectedRoute><EmployeeRoute><PermissionRoute permission="employee.view"><EmployeeDetails /></PermissionRoute></EmployeeRoute></ProtectedRoute>
+        } />
+        <Route path="/supervisor/orders" element={
+          <ProtectedRoute><SupervisorRoute><SupervisorOrdersPage /></SupervisorRoute></ProtectedRoute>
         } />
 
         <Route path="/exchange/rates"      element={<ProtectedRoute><ClientRoute><RatesList /></ClientRoute></ProtectedRoute>} />
