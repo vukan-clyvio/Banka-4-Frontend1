@@ -4,7 +4,7 @@ describe('Scenario 13: Admin menja podatke zaposlenog', () => {
         cy.loginAsAdmin();
     });
 
-    it('otvara 2. zaposlenog iz tabele, menja ime u "Milenko" i vraća se na listu', () => {
+    it('otvara zaposlenog Petar iz tabele, menja ime u "Milenko" i vraća se na listu', () => {
         cy.intercept('GET', '**/employees?page=1&page_size=20*').as('getEmployees');
 
         cy.visit('/employees');
@@ -13,9 +13,9 @@ describe('Scenario 13: Admin menja podatke zaposlenog', () => {
         });
 
         cy.get('table', { timeout: 20000 }).should('be.visible');
-        cy.get('table tbody tr', { timeout: 20000 })
-            .should('have.length.greaterThan', 1)
-            .eq(1)
+        cy.get('table').contains('td', 'Petar')
+            .should('be.visible')
+            .parent('tr')
             .click({ force: true });
 
         cy.location('pathname', { timeout: 20000 }).should('match', /^\/employees\/\d+$/);
@@ -29,15 +29,11 @@ describe('Scenario 13: Admin menja podatke zaposlenog', () => {
         const newDepartment = 'HR';
 
         cy.contains('label', 'Ime').parent().find('input').clear().type(newFirstName);
-        cy.contains('label', /Telefon|Broj telefona/i).parent().find('input').clear().type(newPhone);
-        cy.contains('label', /DEPARTMAN/i)
-            .closest('div') // Idi do prvog zajedničkog kontejnera
-            .find('input')  // Nađi input unutar njega
-            .clear({ force: true })
-            .type('HR', { delay: 100 });
+        cy.contains('label', 'Telefon').parent().find('input').clear().type(newPhone);
+        cy.contains('label', 'Departman').parent().find('input').clear().type(newDepartment);
+
         cy.contains('button[type="submit"]', 'Sačuvaj izmene').click();
-
-
+        cy.wait('@updateEmployee', { timeout: 20000 });
 
         // Back to list via breadcrumb link "Zaposleni" (/employees)
         cy.intercept('GET', '**/employees?page=1&page_size=20*').as('getEmployeesAfterEdit');
@@ -48,6 +44,6 @@ describe('Scenario 13: Admin menja podatke zaposlenog', () => {
 
         // Provera da se novo ime vidi u tabeli
         cy.get('table', { timeout: 20000 }).should('be.visible');
-        cy.get('table').should('contain.text', newFirstName);
+        cy.get('table').contains('td', newFirstName).should('be.visible');
     });
 });
