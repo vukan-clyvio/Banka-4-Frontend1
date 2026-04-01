@@ -37,7 +37,12 @@ export default function Login() {
       setAuth(res.user, res.token, res.refresh_token);
       navigate('/');
     } catch (err) {
-      setError(err.error ?? 'Pogrešan email ili lozinka. Proverite unos i pokušajte ponovo.');
+      const msg = err.error ?? err.message ?? '';
+      if (err.status === 403 || /locked|blocked|too many/i.test(msg)) {
+        setError('Vaš nalog je privremeno blokiran zbog previše neuspešnih pokušaja. Pokušajte ponovo za 5 minuta.');
+      } else {
+        setError(msg || 'Pogrešan email ili lozinka. Proverite unos i pokušajte ponovo.');
+      }
     } finally {
       setSubmitting(false);
     }

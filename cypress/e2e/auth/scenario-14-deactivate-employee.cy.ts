@@ -1,10 +1,10 @@
-// cypress/e2e/employees/scenario-14-deactivate-2nd-employee.cy.ts
+// cypress/e2e/employees/scenario-14-deactivate-employee.cy.ts
 describe('Scenario 14: Admin deaktivira zaposlenog', () => {
     beforeEach(() => {
         cy.loginAsAdmin();
     });
 
-    it('otvara 2. zaposlenog iz tabele, deaktivira ga i vraća se na listu', () => {
+    it('otvara zaposlenog petar@raf.rs iz tabele, deaktivira ga i vraća se na listu', () => {
         cy.intercept('GET', '**/employees?page=1&page_size=20*').as('getEmployees');
 
         cy.visit('/employees');
@@ -14,8 +14,8 @@ describe('Scenario 14: Admin deaktivira zaposlenog', () => {
 
         cy.get('table', { timeout: 20000 }).should('be.visible');
         cy.get('table tbody tr', { timeout: 20000 })
-            .should('have.length.greaterThan', 1)
-            .eq(1)
+            .contains('td', 'petar@raf.rs')
+            .closest('tr')
             .click({ force: true });
 
         cy.location('pathname', { timeout: 20000 }).should('match', /^\/employees\/\d+$/);

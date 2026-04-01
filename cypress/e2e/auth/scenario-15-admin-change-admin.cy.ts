@@ -16,10 +16,13 @@ describe('Scenario 15: Admin pokušava da izmeni drugog admina', () => {
     it('Sistem treba da blokira izmenu podataka drugog admina', () => {
         cy.visit('/employees');
 
-        // 2. Pronalazimo admina koji se zove "NOVI ADMIN" u tabeli
-        // Koristimo contains da nađemo red u tabeli sa tim imenom
-        cy.get('table').contains('td', 'ADMIN NOVI')
+        // 2. Pronalazimo admina koji se zove "Admin Novi" u tabeli
+        // Koristimo email da nađemo red u tabeli
+        cy.get('table').contains('td', 'adminnovi@raf.rs')
             .should('be.visible')
+            .parent('tr')
+            .find('td')
+            .first()
             .click({ force: true });
 
         // 3. Proveravamo da li smo na profilu tog admina
