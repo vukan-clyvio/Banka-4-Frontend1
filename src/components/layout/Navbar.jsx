@@ -111,12 +111,14 @@ export default function Navbar() {
             </NavLink>
           )}
 
-          <NavLink
-            to="/tax"
-            className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-          >
-            Porez
-          </NavLink>
+          {can('isSuperAdmin') && (
+            <NavLink
+              to="/tax"
+              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+            >
+              Porez
+            </NavLink>
+          )}
 
           {hasAdminAccess && (
             <div className={styles.adminDropdownWrap} ref={adminRef}>
