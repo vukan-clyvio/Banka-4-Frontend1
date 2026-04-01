@@ -17,12 +17,9 @@ export function maskCardNumber(number = '') {
 }
 
 export function formatCardNumberForUi(number = '') {
-  const digits = String(number).replace(/\D/g, '');
-  if (!digits) return '•••• •••• •••• ••••';
-  if (digits.length >= 16) {
-    return `${digits.slice(0, 4)} •••• •••• ${digits.slice(-4)}`;
-  }
-  return digits.replace(/(.{4})/g, '$1 ').trim();
+  const masked = maskCardNumber(number);
+  const compact = String(masked).replace(/\s+/g, '');
+  return compact.replace(/(.{4})/g, '$1 ').trim();
 }
 
 export function getCardBrand(cardNumber = '') {
@@ -139,7 +136,7 @@ export function normalizeCard(apiCard) {
   return {
     id: apiCard.id,
     cardNumber: apiCard.card_number ?? apiCard.cardNumber ?? '',
-    holderName: apiCard.holder_name ?? apiCard.holderName ?? apiCard.name ?? '',
+    holderName: apiCard.holder_name ?? apiCard.holderName ?? '—',
     expiresAt: apiCard.expires_at ?? apiCard.expiration_date ?? apiCard.expiresAt ?? '',
     createdAt: apiCard.creation_date ?? apiCard.createdAt ?? '',
     brand: apiCard.card_brand ?? apiCard.brand ?? '',

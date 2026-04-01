@@ -16,6 +16,9 @@ export default function AccountActivation() {
   const [error,      setError]      = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [success,    setSuccess]    = useState(false);
+  const [expired,    setExpired]    = useState(false);
+  const [resending,  setResending]  = useState(false);
+  const [resent,     setResent]     = useState(false);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -42,9 +45,27 @@ export default function AccountActivation() {
       await authApi.activate({ token: urlToken, password });
       setSuccess(true);
     } catch (err) {
-      setError(err.error ?? 'Link je istekao ili nevažeći. Kontaktirajte administratora.');
+      const msg = err.error ?? err.message ?? '';
+      if (err.status === 410 || /expired|istekao/i.test(msg)) {
+        setExpired(true);
+      } else {
+        setError(msg || 'Link je nevažeći. Kontaktirajte administratora.');
+      }
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    setResending(true);
+    setError(null);
+    try {
+      await authApi.resendActivation(urlToken);
+      setResent(true);
+    } catch (err) {
+      setError(err.error ?? 'Greška pri slanju novog linka. Kontaktirajte administratora.');
+    } finally {
+      setResending(false);
     }
   }
 
@@ -113,7 +134,53 @@ export default function AccountActivation() {
 
       <main className={styles.formPanel}>
         <div ref={cardRef} className={styles.card}>
-          {success ? (
+          {expired ? (
+            <div className={styles.successCenter}>
+              {resent ? (
+                <>
+                  <div className={styles.successIcon}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                  <h2 className={styles.formTitle}>Novi link je poslat!</h2>
+                  <p className={styles.formSubtitle}>
+                    Proverite vaš email za novi aktivacioni link.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className={styles.successIcon}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--red, #e74c3c)" strokeWidth="2.5">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                  </div>
+                  <h2 className={styles.formTitle}>Aktivacioni link je istekao</h2>
+                  <p className={styles.formSubtitle}>
+                    Vaš aktivacioni token više nije važeći. Kliknite na dugme ispod da dobijete novi link na email.
+                  </p>
+                  {error && <Alert tip="greska" poruka={error} />}
+                  <button
+                    onClick={handleResend}
+                    disabled={resending}
+                    className={styles.btnPrimary}
+                    style={{ marginTop: 24 }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="23 4 23 10 17 10"/>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                    {resending ? 'Slanje...' : 'Pošalji novi aktivacioni link'}
+                  </button>
+                </>
+              )}
+              <p className={styles.backLink}>
+                <Link to="/login" className={styles.forgotLink}>← Nazad na prijavu</Link>
+              </p>
+            </div>
+          ) : success ? (
             <div className={styles.successCenter}>
               <div className={styles.successIcon}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5">

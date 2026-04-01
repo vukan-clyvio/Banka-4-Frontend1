@@ -8,9 +8,14 @@ export const useAccountStore = create((set, get) => ({
   sortBy:              'date',
   sortOrder:           'desc',
 
-  setAccounts: (accounts) => {
-    const sorted = [...accounts]
-      .sort((a, b) => b.available_balance - a.available_balance);
+  setAccounts: (accounts, rates = []) => {
+    const toRsd = (acc) => {
+      const bal = acc.available_balance ?? 0;
+      if (!acc.currency || acc.currency === 'RSD') return bal;
+      const rate = rates.find(r => r.currency === acc.currency);
+      return rate ? bal * (rate.sell_rate ?? 1) : bal;
+    };
+    const sorted = [...accounts].sort((a, b) => toRsd(b) - toRsd(a));
     set({ accounts: sorted, selectedAccountId: sorted[0]?.account_number ?? null });
   },
 

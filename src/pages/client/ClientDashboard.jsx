@@ -164,6 +164,24 @@ export default function ClientDashboard() {
     setCalcResult(`${calcAmount} ${calcFrom} = ${(parseFloat(calcAmount) * rate.sell_rate).toFixed(2)} RSD`);
   }
 
+  function handleLogout() { logout(); navigate('/login'); }
+
+  const navItems = [
+    { label: 'Računi',     path: '/client/accounts' },
+    { label: 'Transferi',  path: '/client/transfers' },
+    { label: 'Menjačnica', path: '/client/exchange' },
+    { label: 'Kartice',    path: '/client/cards' },
+    { label: 'Hartije',    path: '/client/securities' },
+    { label: 'Krediti',    path: '/client/loans' },
+  ];
+
+  const paymentsSubItems = [
+    { label: 'Novo plaćanje',       path: '/client/payments/new' },
+    { label: 'Prenos',              path: '/client/transfers' },
+    { label: 'Primaoci plaćanja',   path: '/client/recipients' },
+    { label: 'Pregled plaćanja',    path: '/client/payments' },
+  ];
+
   return (
     <div ref={pageRef} className={styles.page}>
       <ClientHeader onProfileClick={() => setShowProfile(true)} />

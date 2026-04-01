@@ -84,3 +84,21 @@
   color: var(--tx-3);
   font-size: 14px;
 }
+
+.btnProfil {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  background: transparent;
+  border: 1.5px solid var(--blue);
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition), color var(--transition);
+}
+
+.btnProfil:hover {
+  background: var(--blue);
+  color: #fff;
+}

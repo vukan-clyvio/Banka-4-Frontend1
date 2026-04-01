@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import gsap                          from 'gsap';
 import { accountsApi }               from '../../api/endpoints/accounts';
+import { exchangeApi }               from '../../api/endpoints/exchange';
 import { useAccountStore }           from '../../store/accountStore';
 import Navbar                        from '../../components/layout/Navbar';
 import Spinner                       from '../../components/ui/Spinner';
@@ -28,11 +29,15 @@ export default function Accounts() {
   const [error, setError]           = useState(null);
   const [modalAccount, setModalAccount] = useState(null);
 
-  // Fetch accounts on mount
+  // Fetch accounts on mount (with exchange rates for correct currency-aware sorting)
   useEffect(() => {
     let cancelled = false;
-    accountsApi.getAll()
-      .then(res => { if (!cancelled) setAccounts(res.data ?? []); })
+    Promise.all([accountsApi.getAll(), exchangeApi.getRates()])
+      .then(([accRes, ratesRes]) => {
+        if (cancelled) return;
+        const rates = Array.isArray(ratesRes?.rates) ? ratesRes.rates : [];
+        setAccounts(accRes.data ?? [], rates);
+      })
       .catch(err => { if (!cancelled) setError(err?.response?.data?.error ?? 'Greška pri učitavanju računa.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; reset(); };
@@ -99,8 +104,11 @@ export default function Accounts() {
         onClose={() => setModalAccount(null)}
         account={modalAccount}
         onAccountUpdated={() => {
-          accountsApi.getAll()
-            .then(res => setAccounts(res.data ?? []))
+          Promise.all([accountsApi.getAll(), exchangeApi.getRates()])
+            .then(([accRes, ratesRes]) => {
+              const rates = Array.isArray(ratesRes?.rates) ? ratesRes.rates : [];
+              setAccounts(accRes.data ?? [], rates);
+            })
             .catch(() => {});
           setModalAccount(null);
         }}

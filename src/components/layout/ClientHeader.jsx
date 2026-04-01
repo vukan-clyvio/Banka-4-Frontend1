@@ -125,6 +125,13 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
         </div>
       </nav>
 
+      <button
+        className={`${styles.headerNavBtn} ${activeNav === 'portfolio' ? styles.headerNavBtnActive : ''}`}
+        onClick={() => navigate('/client/portfolio')}
+      >
+        Moj Portfolio
+      </button>
+
       {/* Right side */}
       <div className={styles.headerRight}>
         <button className={styles.headerProfile} onClick={onProfileClick}>

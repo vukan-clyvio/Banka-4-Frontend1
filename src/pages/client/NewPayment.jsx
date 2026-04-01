@@ -166,7 +166,16 @@ export default function NewPayment() {
       setPendingPaymentId(paymentId);
       setShowVerify(true);
     } catch (err) {
-      setFormError(err?.message || 'Greška pri slanju naloga.');
+      const msg = err?.response?.data?.error ?? err?.message ?? '';
+      const isNotFound =
+        err?.response?.status === 404 ||
+        /ne postoji|not found|account.*not|invalid.*account|recipient/i.test(msg);
+      if (isNotFound) {
+        setFormError('Uneti račun ne postoji.');
+        setRecipientAccount('');
+      } else {
+        setFormError(msg || 'Greška pri slanju naloga.');
+      }
     } finally {
       setSubmitting(false);
     }

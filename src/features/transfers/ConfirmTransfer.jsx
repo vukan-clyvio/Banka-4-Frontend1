@@ -41,13 +41,13 @@ export default function ConfirmTransfer() {
     const fromNum      = fromAccount.account_number ?? fromAccount.number ?? fromAccount.broj;
     const toNum        = toAccount.account_number   ?? toAccount.number   ?? toAccount.broj;
 
-    // Cross-currency: compute commission (1%) and final amount
-    const commission = isCrossCurrency && rateInfo ? numericAmount * 0.01 : 0;
+    // Cross-currency: commission (1%) is deducted from the converted amount in toCurrency
     const convertedAmount = isCrossCurrency && rateInfo?.convertedAmount != null
         ? rateInfo.convertedAmount
         : numericAmount;
+    const commission = isCrossCurrency && rateInfo ? convertedAmount * 0.01 : 0;
     const finalAmount = isCrossCurrency && rateInfo
-        ? convertedAmount * (1 - 0.01)
+        ? convertedAmount - commission
         : numericAmount;
 
     const handleConfirm = async () => {
@@ -161,7 +161,7 @@ export default function ConfirmTransfer() {
                                             {commission.toLocaleString('sr-RS', {
                                                 minimumFractionDigits: 2,
                                                 maximumFractionDigits: 2,
-                                            })} {fromCurrency}
+                                            })} {rateInfo?.toCurrency ?? toCurrency}
                                         </span>
                                     </div>
                                 </>

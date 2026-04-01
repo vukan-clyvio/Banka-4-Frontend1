@@ -39,7 +39,7 @@ export default function NewAccount() {
     account_type:    '',
     currency:        '',
     category:        '',
-    initial_balance: '',
+    initial_balance: '0',
     daily_limit:     '',
     monthly_limit:   '',
     create_card:     false,
@@ -154,12 +154,11 @@ export default function NewAccount() {
       }
     }
 
-    check('account_type',    jeObavezno(accountData.account_type));
-    check('currency',        jeObavezno(accountData.currency));
-    check('category',        jeObavezno(accountData.category));
-    check('initial_balance', jeObavezno(accountData.initial_balance));
-    check('daily_limit',     jeObavezno(accountData.daily_limit));
-    check('monthly_limit',   jeObavezno(accountData.monthly_limit));
+    check('account_type',  jeObavezno(accountData.account_type));
+    check('currency',      jeObavezno(accountData.currency));
+    check('category',      jeObavezno(accountData.category));
+    check('daily_limit',   jeObavezno(accountData.daily_limit));
+    check('monthly_limit', jeObavezno(accountData.monthly_limit));
 
     // Company validation for business accounts
     const ce = {};
@@ -258,7 +257,7 @@ export default function NewAccount() {
         account_type:    accountTypeStr,
         account_kind:    accountKindStr,
         subtype:         subtypeStr,
-        initial_balance: Number(accountData.initial_balance),
+        initial_balance: accountData.initial_balance !== '' ? Number(accountData.initial_balance) : 0,
         create_card:     accountData.create_card,
         generate_card:   accountData.create_card,
         name:            accountKindStr === 'Current' ? 'Tekući račun RSD' : `Devizni račun ${accountData.currency}`,

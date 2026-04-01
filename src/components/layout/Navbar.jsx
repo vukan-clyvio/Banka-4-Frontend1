@@ -102,6 +102,17 @@ export default function Navbar() {
             </NavLink>
           )}
 
+          {can('employee.view') && (
+            <NavLink
+              to="/client/securities"
+              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+            >
+              Hartije
+            </NavLink>
+          )}
+
+
+
           {can('account.create') && (
             <NavLink
               to="/accounts/new"
@@ -117,6 +128,12 @@ export default function Navbar() {
               className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
             >
               Porez
+          {can('employee.view') && (
+            <NavLink
+              to="/portfolio"
+              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+            >
+              Portfolio
             </NavLink>
           )}
 

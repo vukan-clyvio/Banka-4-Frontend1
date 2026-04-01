@@ -1,6 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import styles from './ClientTable.module.css';
 
 export default function ClientTable({ clients, onRowClick }) {
+  const navigate = useNavigate();
+
   if (!clients?.length) {
     return <div className={styles.empty}>Nema klijenata za prikaz.</div>;
   }
@@ -16,6 +19,7 @@ export default function ClientTable({ clients, onRowClick }) {
             <th>Telefon</th>
             <th>Adresa</th>
             <th>Status</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -30,6 +34,14 @@ export default function ClientTable({ clients, onRowClick }) {
                 <span className={`${styles.badge} ${client.active ? styles.badgeActive : styles.badgeInactive}`}>
                   {client.active ? 'Aktivan' : 'Neaktivan'}
                 </span>
+              </td>
+              <td>
+                <button
+                  className={styles.btnProfil}
+                  onClick={e => { e.stopPropagation(); navigate(`/clients/${client.id}`); }}
+                >
+                  Profil →
+                </button>
               </td>
             </tr>
           ))}
