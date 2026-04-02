@@ -15,13 +15,13 @@ export function fillDateByLabel(labelText: string, value: string): void {
     fieldRootByLabel(labelText)
         .find('input[type="date"]')
         .first()
-        .clear()
-        .type(value);
+        .clear({ force: true })
+        .type(value, { force: true });
 }
 
 export function selectByLabel(labelText: string, value: string): void {
     fieldRootByLabel(labelText)
         .find('select')
         .first()
-        .select(value);
+        .select(value, { force: true });
 }

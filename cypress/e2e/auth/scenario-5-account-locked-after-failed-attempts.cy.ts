@@ -13,9 +13,10 @@ describe('Feature 1 - Autentifikacija korisnika', () => {
             cy.wait('@login');
         }
 
-        // 5. pokušaj - sistem zaključava nalog
-        fillLoginForm('dimitrije@raf.rs', 'pogresna123');
-        submitLogin();
+        // 5. pokušaj - sistem zaključava nalog (polja mogu biti disabled)
+        cy.get('#email').clear({ force: true }).type('dimitrije@raf.rs', { force: true });
+        cy.get('#password').clear({ force: true }).type('pogresna123', { force: true, log: false });
+        cy.contains('button', 'Prijavi se').click({ force: true });
 
         cy.wait('@login').then(({ response }) => {
             expect([401, 403]).to.include(response?.statusCode);

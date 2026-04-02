@@ -137,6 +137,9 @@ export default function Navbar() {
               className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
             >
               Porez
+            </NavLink>
+          )}
+
           {can('employee.view') && (
             <NavLink
               to="/portfolio"
