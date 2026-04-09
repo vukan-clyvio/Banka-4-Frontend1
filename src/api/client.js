@@ -145,5 +145,54 @@ bankingApi.interceptors.response.use(
   }
 );
 
+// Interceptor for Trading API - Same refresh logic as bankingApi
+tradingApi.interceptors.response.use(
+  res => res.data,
+  async err => {
+    const original = err.config;
+
+    if ((err.response?.status !== 401 && err.response?.status !== 403) || original._retry) {
+      return Promise.reject(err.response?.data ?? err);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      }).then(token => {
+        original.headers.Authorization = `Bearer ${token}`;
+        return tradingApi(original);
+      });
+    }
+
+    original._retry = true;
+    isRefreshing = true;
+
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken || refreshToken === 'undefined') {
+      isRefreshing = false;
+      return Promise.reject(err.response?.data ?? err);
+    }
+
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/refresh`, { refresh_token: refreshToken });
+      const newToken   = res.data.token;
+      const newRefresh = res.data.refresh_token;
+      const currentUser = useAuthStore.getState().user;
+      useAuthStore.getState().setAuth(currentUser, newToken, newRefresh);
+
+      processQueue(null, newToken);
+      original.headers.Authorization = `Bearer ${newToken}`;
+      return tradingApi(original);
+    } catch (refreshErr) {
+      processQueue(refreshErr, null);
+      useAuthStore.getState().logout();
+      window.location.href = '/login';
+      return Promise.reject(refreshErr);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+);
+
 export default api;
 

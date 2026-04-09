@@ -30,7 +30,8 @@ function applyFilters(list, filters, search) {
     if (filters.askMax   !== '' && sec.ask   > Number(filters.askMax))   return false;
     if (filters.volumeMin !== '' && sec.volume < Number(filters.volumeMin)) return false;
     if (filters.volumeMax !== '' && sec.volume > Number(filters.volumeMax)) return false;
-    if (filters.settlementDate && sec.settlementDate !== filters.settlementDate) return false;
+    if (filters.settlementDateFrom && sec.settlementDate && sec.settlementDate < filters.settlementDateFrom) return false;
+    if (filters.settlementDateTo   && sec.settlementDate && sec.settlementDate > filters.settlementDateTo)   return false;
     return true;
   });
 }
@@ -45,61 +46,118 @@ function applySort(list, sortBy, sortDir) {
 }
 
 
+const ORDER_TYPES = [
+  { value: 'MARKET', label: 'Market' },
+  { value: 'LIMIT',  label: 'Limit' },
+  { value: 'STOP',   label: 'Stop' },
+  { value: 'STOP_LIMIT', label: 'Stop Limit' },
+];
+
 function OrderModal({ security, activeTab, isEmployee, onClose }) {
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState('');
+  const [qtyError, setQtyError] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
+  const [orderType, setOrderType] = useState('MARKET');
+  const [limitValue, setLimitValue] = useState('');
+  const [stopValue, setStopValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
 
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
   const { data: accountsData } = useFetch(() => clientApi.getAccounts(clientId), [clientId]);
   const accounts = Array.isArray(accountsData) ? accountsData : accountsData?.data ?? [];
-  console.log("ACCOUNTS:", accounts);
 
   if (!security) return null;
 
   const label = isEmployee ? 'Kreiraj nalog (tok odobrenja)' : 'Kupi (odmah)';
-  const total = (security.price * qty).toLocaleString('sr-RS', { minimumFractionDigits: 2 });
+  const qtyNum = Number(qty) || 0;
+  const total = (security.price * qtyNum).toLocaleString('sr-RS', { minimumFractionDigits: 2 });
+  const isMarket = orderType === 'MARKET';
+  const needsLimit = orderType === 'LIMIT' || orderType === 'STOP_LIMIT';
+  const needsStop  = orderType === 'STOP'  || orderType === 'STOP_LIMIT';
 
-  async function handleSubmit(e) {
-  e.preventDefault();
+  const selectedAccount = accounts.find(a => (a.account_number ?? a.number) === accountNumber);
 
-  console.log("ACCOUNT (pre check):", accountNumber); 
-
-  setError('');
-  if (!accountNumber) { 
-    console.log("ACCOUNT JE PRAZAN ❌"); 
-    setError('Izaberite račun.'); 
-    return; 
+  function handleQtyChange(e) {
+    const raw = e.target.value;
+    setQty(raw);
+    const n = Number(raw);
+    if (raw === '' || isNaN(n)) {
+      setQtyError('');
+    } else if (n <= 0) {
+      setQtyError('Količina mora biti pozitivan broj (veći od 0).');
+    } else if (!Number.isInteger(n)) {
+      setQtyError('Količina mora biti ceo broj.');
+    } else {
+      setQtyError('');
+    }
   }
 
-  setSubmitting(true);
+  function validate() {
+    setError('');
+    if (!accountNumber) { setError('Izaberite račun.'); return false; }
 
-  try {
-    console.log("SENDING DATA:", {  
-      listingId: security.id,
-      accountNumber: accountNumber,
-      quantity: qty,
-    });
+    const n = Number(qty);
+    if (!qty || isNaN(n) || n <= 0 || !Number.isInteger(n)) {
+      setQtyError('Količina mora biti pozitivan ceo broj (veći od 0).');
+      return false;
+    }
 
-    await securitiesApi.buy({
-      listingId:     security.id,
-      accountNumber: accountNumber,
-      quantity:      qty,
-    });
+    if (needsLimit && (!limitValue || Number(limitValue) <= 0)) {
+      setError('Unesite validnu limit cenu.'); return false;
+    }
+    if (needsStop && (!stopValue || Number(stopValue) <= 0)) {
+      setError('Unesite validnu stop cenu.'); return false;
+    }
 
-    setSubmitted(true);
-  } catch (err) {
-    setError(err?.message || 'Greška pri kupovini. Pokušajte ponovo.');
-  } finally {
-    setSubmitting(false);
+    // Provera sredstava
+    if (selectedAccount) {
+      const balance = selectedAccount.balance ?? selectedAccount.available_balance ?? 0;
+      const estimatedTotal = security.price * n;
+      if (balance < estimatedTotal) {
+        setError(`Nedovoljno sredstava na računu. Stanje: ${balance.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}, potrebno: ${estimatedTotal.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}`);
+        return false;
+      }
+    }
+
+    return true;
   }
-}
+
+  function handleProceedToConfirm(e) {
+    e.preventDefault();
+    if (!validate()) return;
+    setShowConfirm(true);
+  }
+
+  async function handleConfirmSubmit() {
+    setSubmitting(true);
+    setError('');
+
+    try {
+      await securitiesApi.buy({
+        listingId:     security.id,
+        accountNumber: accountNumber,
+        quantity:      Number(qty),
+        orderType:     orderType,
+        limitValue:    needsLimit ? Number(limitValue) : 0,
+        stopValue:     needsStop  ? Number(stopValue)  : 0,
+      });
+
+      setSubmitted(true);
+      setShowConfirm(false);
+    } catch (err) {
+      setError(err?.message || 'Greška pri kupovini. Pokušajte ponovo.');
+      setShowConfirm(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
         <div className={styles.modalHeader}>
           <h3>{isEmployee ? 'Kreiraj nalog' : 'Kupi'} — {security.ticker}</h3>
           <button className={styles.modalClose} onClick={onClose}>✕</button>
@@ -118,8 +176,75 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
               </p>
             )}
           </div>
+        ) : showConfirm ? (
+          /* ── Dijalog potvrde ── */
+          <div style={{ padding: '1.5rem' }}>
+            <h4 style={{ fontSize: 15, fontWeight: 700, color: 'var(--tx-1)', marginTop: 0, marginBottom: 16 }}>
+              Potvrda ordera
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 14, color: 'var(--tx-1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--tx-2)' }}>Hartija:</span>
+                <strong>{security.ticker} — {security.name}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--tx-2)' }}>Broj hartija:</span>
+                <strong>{qty}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--tx-2)' }}>Tip ordera:</span>
+                <strong>{ORDER_TYPES.find(t => t.value === orderType)?.label}</strong>
+              </div>
+              {isMarket && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--tx-2)' }}>Cena:</span>
+                  <span style={{ fontStyle: 'italic', color: 'var(--tx-2)' }}>Koristi se tržišna (market) cena</span>
+                </div>
+              )}
+              {needsLimit && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--tx-2)' }}>Limit cena:</span>
+                  <strong>{Number(limitValue).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} {security.currency}</strong>
+                </div>
+              )}
+              {needsStop && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--tx-2)' }}>Stop cena:</span>
+                  <strong>{Number(stopValue).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} {security.currency}</strong>
+                </div>
+              )}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--tx-2)' }}>Približna ukupna cena:</span>
+                <strong style={{ fontSize: 16, color: 'var(--accent)' }}>{total} {security.currency}</strong>
+              </div>
+            </div>
+
+            {error && <p style={{ fontSize: 13, color: 'var(--red)', margin: '12px 0 0' }}>{error}</p>}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button
+                type="button"
+                className={styles.submitBtn}
+                style={{ flex: 1, background: 'var(--bg)', color: 'var(--tx-2)', border: '1px solid var(--border)' }}
+                onClick={() => setShowConfirm(false)}
+                disabled={submitting}
+              >
+                Nazad
+              </button>
+              <button
+                type="button"
+                className={styles.submitBtn}
+                style={{ flex: 2 }}
+                onClick={handleConfirmSubmit}
+                disabled={submitting}
+              >
+                {submitting ? 'Slanje...' : 'Potvrdi'}
+              </button>
+            </div>
+          </div>
         ) : (
-          <form className={styles.formCard} style={{ boxShadow: 'none', border: 'none' }} onSubmit={handleSubmit}>
+          /* ── Forma za kreiranje ── */
+          <form className={styles.formCard} style={{ boxShadow: 'none', border: 'none' }} onSubmit={handleProceedToConfirm}>
             <div className={styles.formField}>
               <label>Hartija</label>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>
@@ -135,6 +260,56 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
             </div>
 
             <div className={styles.formField}>
+              <label>Tip ordera</label>
+              <select
+                className={styles.formInput}
+                value={orderType}
+                onChange={e => setOrderType(e.target.value)}
+              >
+                {ORDER_TYPES.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              {isMarket && (
+                <p style={{ fontSize: 12, color: 'var(--tx-3)', margin: '4px 0 0', fontStyle: 'italic' }}>
+                  Koristi se trenutna tržišna (market) cena.
+                </p>
+              )}
+            </div>
+
+            {needsLimit && (
+              <div className={styles.formField}>
+                <label>Limit cena ({security.currency})</label>
+                <input
+                  className={styles.formInput}
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Unesite limit cenu..."
+                  value={limitValue}
+                  onChange={e => setLimitValue(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+
+            {needsStop && (
+              <div className={styles.formField}>
+                <label>Stop cena ({security.currency})</label>
+                <input
+                  className={styles.formInput}
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Unesite stop cenu..."
+                  value={stopValue}
+                  onChange={e => setStopValue(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+
+            <div className={styles.formField}>
               <label>Račun za kupovinu</label>
               <select
                 className={styles.formInput}
@@ -146,6 +321,7 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
                 {accounts.map(a => (
                   <option key={a.account_number ?? a.number} value={a.account_number ?? a.number}>
                     {a.name} — {a.account_number ?? a.number}
+                    {(a.balance != null) ? ` (${a.balance.toLocaleString('sr-RS', { minimumFractionDigits: 2 })})` : ''}
                   </option>
                 ))}
               </select>
@@ -156,16 +332,21 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
               <input
                 className={styles.formInput}
                 type="number"
-                min="1"
                 step="1"
+                placeholder="Unesite količinu..."
                 value={qty}
-                onChange={e => setQty(Math.max(1, Number(e.target.value)))}
+                onChange={handleQtyChange}
                 required
               />
+              {qtyError && (
+                <p style={{ fontSize: 12, color: 'var(--red)', margin: '4px 0 0', fontWeight: 600 }}>
+                  {qtyError}
+                </p>
+              )}
             </div>
 
             <div className={styles.formField}>
-              <label>Ukupno ({security.currency})</label>
+              <label>Približna ukupna cena ({security.currency})</label>
               <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--tx-1)' }}>{total}</div>
             </div>
 
@@ -177,8 +358,8 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
 
             {error && <p style={{ fontSize: 13, color: 'var(--red)', margin: 0 }}>{error}</p>}
 
-            <button type="submit" className={styles.submitBtn} disabled={submitting}>
-              {submitting ? 'Slanje...' : label}
+            <button type="submit" className={styles.submitBtn} disabled={submitting || !!qtyError}>
+              {submitting ? 'Slanje...' : 'Nastavi'}
             </button>
           </form>
         )}

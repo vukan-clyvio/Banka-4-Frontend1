@@ -214,6 +214,19 @@ export default function Navbar() {
                       Aktuari
                     </NavLink>
                   )}
+                  {can('employee.view') && (
+                    <NavLink
+                      to="/admin/exchanges"
+                      className={({ isActive }) => `${styles.adminMenuItem} ${isActive ? styles.adminMenuItemActive : ''}`}
+                      onClick={() => setShowAdminMenu(false)}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 3v18h18"/>
+                        <path d="M7 16l4-4 4 4 5-5"/>
+                      </svg>
+                      Berze
+                    </NavLink>
+                  )}
                 </div>
               )}
             </div>
