@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import Navbar from '../../components/layout/Navbar';
 import Alert from '../../components/ui/Alert';
-import { ordersApi } from '../../api/endpoints/orders';
+import { ordersApi, fetchUserName } from '../../api/endpoints/orders';
 import { useAuthStore } from '../../store/authStore';
 import { ORDER_STATUS, USER_ROLE, normalizeOrder, APPROVAL_DECISION , ORDER_TYPE, ORDER_DIRECTION} from '../../utils/orders/orderModel';
 import { getOrderPermissions } from '../../utils/orders/orderPermissions';
@@ -142,23 +142,42 @@ export default function SupervisorOrdersPage() {
 
     if (fetchLoading) return;
 
-    try {
-      const response = ordersData;
-      const rawList = Array.isArray(response)
-        ? response
-        : (response?.items ?? response?.data ?? response?.content ?? response?.orders ?? []);
-      const normalized = rawList.map(normalizeOrder);
+    async function resolveOrders() {
+      try {
+        const response = ordersData;
+        const rawList = Array.isArray(response)
+          ? response
+          : (response?.items ?? response?.data ?? response?.content ?? response?.orders ?? []);
+        const normalized = rawList.map(normalizeOrder);
 
-      // setOrders(normalized.length > 0 ? normalized : MOCK_ORDERS.map(normalizeOrder));
-      setOrders(normalized);
+        if (fetchError) {
+          setApiError(fetchError?.message || 'Orderi trenutno nisu dostupni. Prikazan je mock prikaz radi razvoja.');
+        }
 
-      if (fetchError) {
-        setApiError(fetchError?.message || 'Orderi trenutno nisu dostupni. Prikazan je mock prikaz radi razvoja.');
+        // Resolve agent names for orders that don't already have one
+        const uniqueUserIds = [...new Set(
+          normalized.filter(o => o.agentName === '—' && o.userId).map(o => o.userId)
+        )];
+
+        if (uniqueUserIds.length > 0) {
+          const nameMap = Object.fromEntries(
+            await Promise.all(uniqueUserIds.map(async id => [id, await fetchUserName(id)]))
+          );
+          setOrders(normalized.map(o =>
+            o.agentName === '—' && nameMap[o.userId]
+              ? { ...o, agentName: nameMap[o.userId] }
+              : o
+          ));
+        } else {
+          setOrders(normalized);
+        }
+      } catch (err) {
+        setOrders(MOCK_ORDERS.map(normalizeOrder));
+        setApiError(err?.message || 'Orderi trenutno nisu dostupni. Prikazan je mock prikaz radi razvoja.');
       }
-    } catch (err) {
-      setOrders(MOCK_ORDERS.map(normalizeOrder));
-      setApiError(err?.message || 'Orderi trenutno nisu dostupni. Prikazan je mock prikaz radi razvoja.');
     }
+
+    resolveOrders();
   }, [ordersData, fetchLoading, fetchError]);
 
   const filteredOrders = useMemo(() => {

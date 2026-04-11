@@ -103,6 +103,13 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
 
   function validate() {
     setError('');
+    // Block orders on expired futures contracts
+    if (security.type === 'FUTURES' && security.settlementDate) {
+      if (new Date(security.settlementDate) < new Date()) {
+        setError('Nije moguće kreirati order — futures ugovor je istekao.');
+        return false;
+      }
+    }
     if (!accountNumber) { setError('Izaberite račun.'); return false; }
 
     const n = Number(qty);
@@ -436,18 +443,16 @@ export default function ClientSecurities() {
 */
 
   async function handleSelectSecurity(sec) {
-  setSelectedSec(sec);
-  // Kada back tim popravi endpoint, odkomentarisati:
-  // try {
-  //   let details;
-  //   if (activeTab === 'STOCK')   details = await securitiesApi.getStockById(sec.id);
-  //   if (activeTab === 'FUTURES') details = await securitiesApi.getFuturesById(sec.id);
-  //   if (activeTab === 'FOREX')   details = await securitiesApi.getForexById(sec.id);
-  //   if (activeTab === 'OPTIONS') details = await securitiesApi.getOptionById(sec.id);
-  //   setSelectedSec(details ?? sec);
-  // } catch {
-  //   setSelectedSec(sec);
-  // }
+    setSelectedSec(sec);
+    try {
+      let details;
+      if (activeTab === 'STOCK')   details = await securitiesApi.getStockById(sec.id);
+      if (activeTab === 'FUTURES') details = await securitiesApi.getFuturesById(sec.id);
+      if (activeTab === 'FOREX')   details = await securitiesApi.getForexById(sec.id);
+      if (details) setSelectedSec(details);
+    } catch {
+      // fallback to list data
+    }
   }
   
   async function handleRefresh(sec) {
