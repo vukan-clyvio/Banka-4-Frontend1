@@ -30,7 +30,7 @@ tradingApi.interceptors.request.use(attachToken);
 
 let refreshPromise = null;
 
-function doRefresh() {
+export function doRefresh() {
   if (refreshPromise) return refreshPromise;
 
   const refreshToken = localStorage.getItem('refreshToken');

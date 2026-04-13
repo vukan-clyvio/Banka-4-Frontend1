@@ -41,6 +41,7 @@ export default function PortfolioPage() {
   const canManageOTC = can('portfolio.otc.manage') || can('admin.all');
   const canExercise = can('portfolio.options.exercise');
   const canViewOptions = can('portfolio.options.view') || canExercise;
+  const isAgent = canManageOTC || canViewOptions || can('trading');
 
   // --- ISPRAVLJENA API LOGIKA ---
   // --- ISPRAVLJENA API LOGIKA ---
@@ -52,11 +53,10 @@ export default function PortfolioPage() {
         setLoading(true);
         let res;
         
-        // Dinamički biramo endpoint: Actuary/Admin ili običan Client
-        if (canManageOTC || canViewOptions) {
+        // Dinamički biramo endpoint: Actuary/Agent ili običan Client
+        if (isAgent) {
           res = await portfolioApi.getActuaryPortfolio(user.id);
         } else {
-          // OVO JE DODATO: Poziv za običnog klijenta ako uslovi iznad nisu ispunjeni
           res = await portfolioApi.getClientPortfolio(user.id);
         }
 
@@ -81,7 +81,7 @@ export default function PortfolioPage() {
     };
 
     loadEverything();
-  }, [user?.id, canManageOTC, canViewOptions]);
+  }, [user?.id, isAgent]);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {

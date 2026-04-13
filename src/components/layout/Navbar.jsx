@@ -46,6 +46,7 @@ export default function Navbar() {
     : 'Korisnik';
 
   const hasAdminAccess = canAny('employee.view', 'admin.cards', 'admin.clients', 'admin.loans');
+  const isAgent = canAny('portfolio.otc.manage', 'portfolio.options.view', 'portfolio.options.exercise', 'admin.all', 'trading');
 
   return (
     <>
@@ -104,7 +105,7 @@ export default function Navbar() {
             </NavLink>
           )}
 
-          {can('employee.view') && (
+          {(can('employee.view') || isAgent) && (
             <NavLink
               to="/securities"
               className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
@@ -140,7 +141,7 @@ export default function Navbar() {
             </NavLink>
           )}
 
-          {can('employee.view') && (
+          {(can('employee.view') || isAgent) && (
             <NavLink
               to="/portfolio"
               className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}

@@ -14,6 +14,7 @@ import styles from './ClientSubPage.module.css';
 import secStyles from './ClientSecurities.module.css';
 import { clientApi } from '../../api/endpoints/client';
 import { accountsApi } from '../../api/endpoints/accounts';
+import { loansApi } from '../../api/endpoints/loans';
 
 
 function applyFilters(list, filters, search) {
@@ -64,6 +65,9 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [afterHours, setAfterHours] = useState(false);
+  const [orderStatus, setOrderStatus] = useState(null);
+  const [allOrNone, setAllOrNone]     = useState(false);
+  const [isMargin, setIsMargin]       = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
 
@@ -79,6 +83,16 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
     ? allAccounts.filter(a => (a.account_type ?? a.AccountType)?.toUpperCase() === 'BANK')
     : allAccounts;
 
+  const { data: loansData, loading: loansLoading } = useFetch(
+    () => (!clientId || isEmployee) ? Promise.resolve([]) : loansApi.getMyLoans(clientId),
+    [clientId, isEmployee]
+  );
+  const loansRaw = Array.isArray(loansData) ? loansData : loansData?.data ?? [];
+  const approvedLoanAmount = loansRaw
+    .filter(l => String(l.status ?? '').toUpperCase() === 'APPROVED')
+    .reduce((sum, l) => sum + Number(l.amount ?? 0), 0);
+  const loadingLoans = !isEmployee && loansLoading;
+
   if (!security) return null;
 
   const label = isEmployee ? 'Kreiraj nalog (tok odobrenja)' : 'Kupi (odmah)';
@@ -89,6 +103,15 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
   const needsStop  = orderType === 'STOP'  || orderType === 'STOP_LIMIT';
 
   const selectedAccount = accounts.find(a => (a.AccountNumber ?? a.account_number ?? a.accountNumber ?? a.number) === accountNumber);
+
+  function getRequiredMarginAmount(quantityValue) {
+    const qtyNumber = Number(quantityValue || 0);
+    const initialMargin = Number(security.initialMarginCost ?? security.initial_margin_cost);
+    if (!isNaN(initialMargin) && initialMargin > 0) return initialMargin * qtyNumber;
+    const maintenanceMargin = Number(security.maintenanceMargin ?? security.maintenance_margin);
+    if (!isNaN(maintenanceMargin) && maintenanceMargin > 0) return maintenanceMargin * 1.1 * qtyNumber;
+    return security.price * qtyNumber;
+  }
 
   function handleQtyChange(e) {
     const raw = e.target.value;
@@ -130,13 +153,27 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
     }
 
     // Provera sredstava
-    if (selectedAccount) {
-      const balance = selectedAccount.Balance ?? selectedAccount.AvailableBalance ?? selectedAccount.balance ?? selectedAccount.available_balance ?? 0;
-      const estimatedTotal = security.price * n;
-      if (balance < estimatedTotal) {
-        setError(`Nedovoljno sredstava na računu. Stanje: ${balance.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}, potrebno: ${estimatedTotal.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}`);
-        return false;
+    const balance = selectedAccount
+      ? Number(selectedAccount.Balance ?? selectedAccount.AvailableBalance ?? selectedAccount.balance ?? selectedAccount.available_balance ?? 0)
+      : 0;
+    const estimatedTotal = security.price * n;
+
+    if (isMargin) {
+      const requiredMargin = getRequiredMarginAmount(n);
+      if (!isEmployee) {
+        if (approvedLoanAmount < requiredMargin && balance < requiredMargin) {
+          setError(`Margin order nije dozvoljen. Potrebno je da odobren zajam ili stanje računa pokrije najmanje ${requiredMargin.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}.`);
+          return false;
+        }
+      } else {
+        if (balance < requiredMargin) {
+          setError(`Margin order nije dozvoljen. Zaposleni mora imati dovoljno sredstava na izabranom računu: najmanje ${requiredMargin.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}.`);
+          return false;
+        }
       }
+    } else if (selectedAccount && balance < estimatedTotal) {
+      setError(`Nedovoljno sredstava na računu. Stanje: ${balance.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}, potrebno: ${estimatedTotal.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}`);
+      return false;
     }
 
     return true;
@@ -155,14 +192,17 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
     try {
       const result = await securitiesApi.buy({
         listingId:     security.id,
-        accountNumber: accountNumber,
+        accountNumber,
         quantity:      Number(qty),
-        orderType:     orderType,
+        orderType,
         limitValue:    needsLimit ? Number(limitValue) : 0,
         stopValue:     needsStop  ? Number(stopValue)  : 0,
+        allOrNone,
+        margin:        isMargin,
       });
 
       setAfterHours(result?.after_hours === true);
+      setOrderStatus(result?.status ?? null);
       setSubmitted(true);
       setShowConfirm(false);
     } catch (err) {
@@ -185,16 +225,20 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
           <div style={{ padding: '2rem', textAlign: 'center' }}>
             <div className={styles.successBanner}>
               {isEmployee
-                ? '✓ Order je kreiran i čeka odobrenje.'
+                ? orderStatus === 'APPROVED'
+                  ? '✓ Order je kreiran i odmah odobren.'
+                  : '✓ Order je kreiran i čeka odobrenje.'
                 : afterHours
                   ? '✓ Order je kreiran. Izvršiće se kada berza otvori.'
                   : '✓ Order je kreiran i u obradi.'}
             </div>
             {(isEmployee || afterHours) && (
               <p style={{ fontSize: 13, color: 'var(--tx-2)', marginTop: 12 }}>
-                {afterHours && !isEmployee
-                  ? 'Tržište je zatvoreno. Novac i hartija će biti ažurirani kada berza otvori.'
-                  : 'Novac će biti skinut sa računa tek nakon odobrenja.'}
+                {isEmployee && orderStatus === 'APPROVED'
+                  ? 'Order je izvršen u okviru dnevnog limita.'
+                  : afterHours && !isEmployee
+                    ? 'Tržište je zatvoreno. Novac i hartija će biti ažurirani kada berza otvori.'
+                    : 'Novac će biti skinut sa računa tek nakon odobrenja.'}
               </p>
             )}
           </div>
@@ -233,6 +277,18 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--tx-2)' }}>Stop cena:</span>
                   <strong>{Number(stopValue).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} {security.currency}</strong>
+                </div>
+              )}
+              {allOrNone && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--tx-2)' }}>All or None:</span>
+                  <strong>Da</strong>
+                </div>
+              )}
+              {isMargin && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--tx-2)' }}>Margin:</span>
+                  <strong>Da ({getRequiredMarginAmount(qty).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} {security.currency})</strong>
                 </div>
               )}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', justifyContent: 'space-between' }}>
@@ -372,6 +428,25 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
                 </p>
               )}
             </div>
+
+            <div style={{ display: 'flex', gap: 20, marginTop: 4 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                <input type="checkbox" checked={allOrNone} onChange={e => setAllOrNone(e.target.checked)} />
+                All or None
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                <input type="checkbox" checked={isMargin} onChange={e => setIsMargin(e.target.checked)} />
+                Margin
+              </label>
+            </div>
+
+            {isMargin && !isEmployee && (
+              <p style={{ fontSize: 12, color: 'var(--tx-3)', margin: '4px 0 0' }}>
+                {loadingLoans
+                  ? 'Učitavanje odobrenih zajmova...'
+                  : `Odobreni zajmovi ukupno: ${approvedLoanAmount.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}`}
+              </p>
+            )}
 
             <div className={styles.formField}>
               <label>Približna ukupna cena ({security.currency})</label>
