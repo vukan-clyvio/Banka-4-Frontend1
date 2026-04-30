@@ -39,4 +39,20 @@ export const investmentFundsApi = {
 
   getClientProfit: (clientId) =>
     tradingApi.get(`/client/${clientId}/assets/profit`),
+
+  getProfitActuaries: () => 
+    tradingApi.get('/profit/actuaries'),
+  
+  getProfitFunds: () => 
+    tradingApi.get('/profit/funds'),
+    
+  // Swagger: GET /api/funds
+  getAllFunds: (params = {}) => tradingApi.get('/funds', { params }),
+
+  // Swagger: GET /api/actuary/{actId}/assets/funds
+  getFundsManagedByActuary: (actId) => tradingApi.get(`/actuary/${actId}/assets/funds`),
+
+  // Swagger: GET /api/profit/funds
+  getFundProfits: () => tradingApi.get('/profit/funds'),
+  
 };
