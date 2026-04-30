@@ -55,6 +55,9 @@ import CurrencyCalculator from './features/exchange/CurrencyCalculator.jsx';
 import SupervisorOrdersPage from './pages/supervisor/SupervisorOrdersPage.jsx';
 import ProfitBankPage from './pages/profit-bank/ProfitBankPage.jsx';
 
+import OtcPortalPage from './pages/otc/OTCPortalPage.jsx';
+
+
 function ProtectedRoute({ children }) {
   const token = useAuthStore(s => s.token);
   if (!token) return <Navigate to="/login" replace />;
@@ -129,7 +132,15 @@ export default function App() {
         <Route path="/client/securities" element={<ProtectedRoute><ClientRoute><ClientSecurities /></ClientRoute></ProtectedRoute>} />
         <Route path="/transfers/history"   element={<ProtectedRoute><ClientRoute><ClientTransferHistory /></ClientRoute></ProtectedRoute>} />
         <Route path="/client/portfolio" element={<ProtectedRoute><ClientRoute><ClientPortfolioPage /></ClientRoute></ProtectedRoute>} />
-
+        <Route
+            path="/otc"
+            element={
+              <ProtectedRoute>
+                {/* za sada: pusti sve ulogovane (posle stežemo na trade + supervisor) */}
+                <OtcPortalPage />
+              </ProtectedRoute>
+            }
+        />
         {/* ADMIN/EMPLOYEE RUTE */}
         <Route path="/admin"       element={<ProtectedRoute><EmployeeRoute><Dashboard      /></EmployeeRoute></ProtectedRoute>} />
         <Route path="/clients"      element={<ProtectedRoute><EmployeeRoute><ClientList    /></EmployeeRoute></ProtectedRoute>} />
