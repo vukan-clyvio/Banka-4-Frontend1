@@ -7,6 +7,7 @@ import { investmentFundsApi } from '../../api/endpoints/investmentFunds';
 import { accountsApi } from '../../api/endpoints/accounts';
 import { portfolioApi } from '../../api/endpoints/portfolio';
 import styles from './ProfitBankPage.module.css';
+import { useAuthStore } from '../../store/authStore';
 
 const TAB = {
   ACTUARIES: 'ACTUARIES',
@@ -61,12 +62,14 @@ export default function ProfitBankPage() {
     refetch: refetchActuaries,
   } = useFetch(() => investmentFundsApi.getActuaryPerformances(), []);
 
+  const userId = useAuthStore(s => s.user?.employee_id ?? s.user?.id);
+
   const {
     data: fundsResponse,
     loading: fundsLoading,
     error: fundsError,
     refetch: refetchFunds,
-  } = useFetch(() => investmentFundsApi.getFunds({ managed_only: true }), []);
+  } = useFetch(() => investmentFundsApi.getManagedFunds(userId), [userId]);
 
   const {
     data: selectedFundResponse,
@@ -86,7 +89,10 @@ export default function ProfitBankPage() {
   const {
     data: actuaryPortfolioResponse,
     loading: actuaryPortfolioLoading,
-  } = useFetch(() => portfolioApi.getActuaryPortfolio(), []);
+  } = useFetch(
+    () => (userId ? portfolioApi.getActuaryPortfolio(userId) : Promise.resolve([])),
+    [userId]
+  );
 
   const actuaries = useMemo(() => {
     const raw = Array.isArray(actuariesResponse)
@@ -196,15 +202,15 @@ export default function ProfitBankPage() {
     try {
       if (modalState.type === ACTION.DEPOSIT) {
         await investmentFundsApi.depositToFund(fund.fund_id, {
-          bank_account_number: form.bankAccountNumber,
-          amount_rsd: amount,
+          account_number: form.bankAccountNumber,
+          amount,
         });
 
         setFeedback({ type: 'uspeh', text: 'Uplata u fond je uspešno evidentirana.' });
       } else {
         await investmentFundsApi.withdrawFromFund(fund.fund_id, {
-          bank_account_number: form.bankAccountNumber,
-          amount_rsd: amount,
+          account_number: form.bankAccountNumber,
+          amount,
         });
 
         setFeedback({ type: 'uspeh', text: 'Povlačenje iz fonda je uspešno evidentirano.' });
@@ -436,11 +442,13 @@ export default function ProfitBankPage() {
                             </button>
                           </td>
                           <td>
-                            {fund.manager?.first_name} {fund.manager?.last_name}
+                            {fund.manager
+                              ? `${fund.manager.first_name ?? ''} ${fund.manager.last_name ?? ''}`.trim()
+                              : '—'}
                           </td>
-                          <td>{formatPercent(fund.bank_share_percent)}</td>
-                          <td>{formatRSD(fund.bank_share_rsd)}</td>
-                          <td>{formatRSD(fund.profit_rsd)}</td>
+                          <td>{formatPercent(fund.bank_share_percent ?? null)}</td>
+                          <td>{formatRSD(fund.bank_share_rsd ?? fund.fund_value ?? 0)}</td>
+                          <td>{formatRSD(fund.profit_rsd ?? 0)}</td>
                           <td>
                             <div className={styles.actionRow}>
                               <button
@@ -507,7 +515,7 @@ export default function ProfitBankPage() {
                   <InfoCard label="Udeo banke (%)" value={formatPercent(selectedFund.bank_share_percent)} />
                   <InfoCard label="Udeo banke (RSD)" value={formatRSD(selectedFund.bank_share_rsd)} />
                   <InfoCard label="Profit u RSD" value={formatRSD(selectedFund.profit_rsd)} />
-                  <InfoCard label="Dostupna likvidnost" value={formatRSD(selectedFund.liquidity_rsd)} />
+                  <InfoCard label="Dostupna likvidnost" value={formatRSD(selectedFund.liquidity_rsd ?? selectedFund.liquid_assets)}/>
                   <InfoCard label="Opis" value={selectedFund.description || '—'} />
                 </div>
 
@@ -516,10 +524,10 @@ export default function ProfitBankPage() {
                 <div className={styles.accountsBlock}>
                   <h3 className={styles.subTitle}>Bankovni račun fonda</h3>
 
-                  {selectedFund.fund_account ? (
+                  {selectedFund.fund_account || selectedFund.account_number ? (
                     <div className={styles.accountItem}>
-                      <strong>{selectedFund.fund_account.name || 'Račun fonda'}</strong>
-                      <span>{selectedFund.fund_account.account_number}</span>
+                      <strong>{selectedFund.fund_account?.name || 'Račun fonda'}</strong>
+                      <span>{selectedFund.fund_account?.account_number || selectedFund.account_number}</span>
                     </div>
                   ) : (
                     <div className={styles.accountItem}>

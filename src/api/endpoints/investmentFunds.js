@@ -5,7 +5,7 @@ export const investmentFundsApi = {
     tradingApi.post('/investment-funds', payload),
 
   getFunds: (params = {}) =>
-    tradingApi.get('/investment-funds', { params }),
+    tradingApi.get('/funds', { params }),
 
   getFundDetails: (fundId) =>
     tradingApi.get(`/investment-funds/${fundId}`),
@@ -16,8 +16,8 @@ export const investmentFundsApi = {
   getFundPerformance: (fundId, range = 'monthly') =>
     tradingApi.get(`/investment-funds/${fundId}/performance`, { params: { range } }),
 
-  getManagedFunds: () =>
-    tradingApi.get('/me/funds'),
+  getManagedFunds: (actuaryId) =>
+    tradingApi.get(`/actuary/${actuaryId}/assets/funds`),
 
   depositToFund: (fundId, payload) =>
     tradingApi.post(`/investment-funds/${fundId}/deposit`, payload),
@@ -32,7 +32,7 @@ export const investmentFundsApi = {
     tradingApi.post(`/investment-funds/${fundId}/assets/${assetId}/sell`, payload),
 
   getActuaryPerformances: () =>
-    tradingApi.get('/profit-bank/actuaries'),
+    tradingApi.get('/profit/actuaries'),
 
   getActuaryProfit: (actuaryId) =>
     tradingApi.get(`/actuary/${actuaryId}/assets/profit`),
