@@ -7,6 +7,7 @@ import { portfolioApi } from '../../api/endpoints/portfolio';
 import { accountsApi } from '../../api/endpoints/accounts';
 import { otcApi } from '../../api/endpoints/otc';
 import styles from './OtcPortalPage.module.css';
+const USE_MOCK = true;
 
 const TAB = {
   AKTIVNE: 'AKTIVNE',
@@ -131,11 +132,15 @@ function SklopljeniUgovori() {
   load();
 }, [user?.id]);
 
-  const filtered = options.filter(o =>
-  filter === 'expired'
+  const filtered = options.filter(o => {
+  // ❗ SKLONI već iskorišćene ugovore
+  if (o.is_exercised) return false;
+
+  // filtriraj po statusu
+  return filter === 'expired'
     ? isExpired(o.settlement_date)
-    : !isExpired(o.settlement_date)
-  );
+    : !isExpired(o.settlement_date);
+});
 
   function openModal(contract) {
     setConfirmModal(contract);
