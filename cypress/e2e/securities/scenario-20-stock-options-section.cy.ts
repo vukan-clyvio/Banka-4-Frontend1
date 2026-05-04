@@ -1,41 +1,16 @@
 import { buildStocks, loginAs, agentUser } from './helpers';
 
-// Opcijska sekcija u OptionTable.jsx očekuje format:
-// options: [{ settlementDate: string, strikes: [{ strike, call: {...}, put: {...} }] }]
-const stockWithOptions = {
+const EXP = '2026-06-20';
+
+// Backend flat format — getStockById poziva mapOptionRaw + groupOptions interno
+const backendStock = {
   ...buildStocks()[0],
-  priceHistory: { '1D': [], '1W': [], '1M': [], '1Y': [], '5Y': [] },
+  history: [],
   options: [
-    {
-      settlementDate: '2026-06-20',
-      strikes: [
-        {
-          strike: 400,
-          call: { last: 15.2, theta: -0.05, bid: 15.0, ask: 15.4, volume: 1200, oi: 8000 },
-          put:  { last: 0.8,  theta: -0.01, bid: 0.75, ask: 0.85, volume: 300,  oi: 1500 },
-        },
-        {
-          strike: 410,
-          call: { last: 10.5, theta: -0.06, bid: 10.3, ask: 10.7, volume: 950, oi: 6000 },
-          put:  { last: 2.1,  theta: -0.02, bid: 2.0,  ask: 2.2,  volume: 500, oi: 3000 },
-        },
-        {
-          strike: 415,
-          call: { last: 7.0,  theta: -0.07, bid: 6.8,  ask: 7.2,  volume: 800, oi: 4000 },
-          put:  { last: 4.5,  theta: -0.03, bid: 4.3,  ask: 4.7,  volume: 700, oi: 3500 },
-        },
-        {
-          strike: 420,
-          call: { last: 4.0,  theta: -0.08, bid: 3.8,  ask: 4.2,  volume: 600, oi: 3000 },
-          put:  { last: 7.8,  theta: -0.04, bid: 7.6,  ask: 8.0,  volume: 900, oi: 5000 },
-        },
-        {
-          strike: 430,
-          call: { last: 1.5,  theta: -0.09, bid: 1.4,  ask: 1.6,  volume: 200, oi: 1000 },
-          put:  { last: 14.0, theta: -0.05, bid: 13.8, ask: 14.2, volume: 1100, oi: 7000 },
-        },
-      ],
-    },
+    { listing_id: 101, option_type: 'CALL', settlement_date: EXP, strike: 400, price: 15.2, bid: 15.0, ask: 15.4, volume: 1200, open_interest: 8000, implied_volatility: 0.25 },
+    { listing_id: 102, option_type: 'PUT',  settlement_date: EXP, strike: 400, price: 0.8,  bid: 0.75, ask: 0.85, volume: 300,  open_interest: 1500, implied_volatility: 0.10 },
+    { listing_id: 103, option_type: 'CALL', settlement_date: EXP, strike: 420, price: 4.0,  bid: 3.8,  ask: 4.2,  volume: 600,  open_interest: 3000, implied_volatility: 0.22 },
+    { listing_id: 104, option_type: 'PUT',  settlement_date: EXP, strike: 420, price: 7.8,  bid: 7.6,  ask: 8.0,  volume: 900,  open_interest: 5000, implied_volatility: 0.28 },
   ],
 };
 
@@ -48,7 +23,7 @@ describe('Scenario 20: Detaljan prikaz akcije sadrži sekciju sa opcijama', () =
 
     cy.intercept({ method: 'GET', pathname: `/api/listings/stocks/${buildStocks()[0].listing_id}` }, {
       statusCode: 200,
-      body: stockWithOptions,
+      body: backendStock,
     }).as('getStockDetail');
 
     loginAs(agentUser, '/securities');
@@ -67,21 +42,23 @@ describe('Scenario 20: Detaljan prikaz akcije sadrži sekciju sa opcijama', () =
     cy.contains('PUTS').should('be.visible');
   });
 
-  it('prikazuje kolone opcija (strike, bid, ask, volume, OI)', () => {
-  // 👉 ne forsiramo uppercase
-  cy.contains(/strike/i).should('exist');
+  it('prikazuje kolone strike, bid, ask, vol, OI unutar tabele opcija', () => {
+    cy.contains('h3', 'Opcije').closest('section').within(() => {
+      cy.contains('STRIKE').should('exist');
+      cy.contains('Bid').should('exist');
+      cy.contains('Ask').should('exist');
+      cy.contains('Vol').should('exist');
+      cy.contains('OI').should('exist');
+    });
+  });
 
-  // fallback — ne zavisi od rendera
-  cy.contains(/bid/i).should('exist');
-  cy.contains(/ask/i).should('exist');
-
-  // može biti vol ili volume
-  cy.contains(/vol/i).should('exist');
-
-  cy.contains(/oi/i).should('exist');
-});
+  it('prikazuje datum isteka u toolbar-u opcija', () => {
+    cy.contains('h3', 'Opcije').closest('section').within(() => {
+      cy.contains('2026').should('exist');
+    });
+  });
 
   it('prikazuje Shared Price banner', () => {
-    cy.contains('Shared Price').should('be.visible');
+    cy.contains('Tržišna cena akcije (Shared Price)').should('be.visible');
   });
-}); 
+});
