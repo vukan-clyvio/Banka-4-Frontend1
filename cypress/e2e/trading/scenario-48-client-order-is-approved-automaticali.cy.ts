@@ -57,10 +57,10 @@ describe('Scenario 48: Klijentov order se automatski odobrava', () => {
             // Tražimo dugme koje sadrži '✕' (iks)
             cy.contains('button', '✕').click({ force: true });
         });
+        cy.loginAsAdmin();
 
-        // 9. POVRATAK NA DASHBOARD PREKO URL-A ILI NAVBARA
-        cy.visit('http://localhost:5173/client/portfolio' +
-            '');
+        // idi na Orders iz navbara
+        cy.visit('http://localhost:5173/supervisor/orders');
 
     });
 });

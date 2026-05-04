@@ -16,8 +16,7 @@ export const investmentFundsApi = {
   getFundPerformance: (fundId, range = 'monthly') =>
     tradingApi.get(`/investment-funds/${fundId}/performance`, { params: { range } }),
 
-  getManagedFunds: () =>
-    tradingApi.get('/me/funds'),
+  getManagedFunds: (params = {}) => tradingApi.get('/investment-funds', { params }),
 
   depositToFund: (fundId, payload) =>
     tradingApi.post(`/investment-funds/${fundId}/deposit`, payload),
