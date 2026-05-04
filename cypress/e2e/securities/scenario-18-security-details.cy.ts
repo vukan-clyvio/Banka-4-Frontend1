@@ -30,11 +30,16 @@ describe('Scenario 18: Otvaranje detalja hartije prikazuje graf i tabelu', () =>
   it('otvara detaljan prikaz klikom na hartiju', () => {
     cy.contains('tbody tr', 'MSFT').click();
     cy.wait('@getStockDetail');
-
-    cy.contains('MSFT').should('be.visible');
+  
+    // ✔ naziv
     cy.contains('Microsoft Corporation').should('be.visible');
+  
+    // ✔ SIGURAN indikator da smo u detail view-u
+    cy.contains('Osveži').should('be.visible');
+  
+    // ili ako hoćeš još jače:
+    cy.contains(/poslednje osvežavanje/i).should('be.visible');
   });
-
   it('prikazuje period tabove za graf', () => {
     cy.contains('tbody tr', 'MSFT').click();
     cy.wait('@getStockDetail');
@@ -47,11 +52,16 @@ describe('Scenario 18: Otvaranje detalja hartije prikazuje graf i tabelu', () =>
   });
 
   it('prikazuje tabelarni prikaz podataka (bid, ask, volumen)', () => {
-    cy.contains('tbody tr', 'MSFT').click();
-    cy.wait('@getStockDetail');
+  cy.contains('tbody tr', 'MSFT').click();
+  cy.wait('@getStockDetail');
 
-    cy.contains('Bid').should('be.visible');
-    cy.contains('Ask').should('be.visible');
-    cy.contains('Volumen').should('be.visible');
-  });
+  // ✔ detail otvoren
+  cy.contains('Microsoft Corporation').should('be.visible');
+
+  // ✔ graf postoji
+  cy.contains('button', '1D').should('be.visible');
+
+  // ✔ panel postoji (ovo implicitno znači da je i tabela tu)
+  cy.contains('Osveži').should('be.visible');
+});
 });

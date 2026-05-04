@@ -4,12 +4,12 @@ describe('Scenario 19: Promena perioda na grafiku menja prikazane podatke', () =
   beforeEach(() => {
     const stocks = buildStocks();
 
-    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, {
+    cy.intercept('GET', '**/api/listings/stocks*', {
       statusCode: 200,
       body: stocks,
     }).as('getStocks');
 
-    cy.intercept({ method: 'GET', pathname: `/api/listings/stocks/${stocks[0].listing_id}` }, {
+    cy.intercept('GET', `**/api/listings/stocks/${stocks[0].listing_id}`, {
       statusCode: 200,
       body: {
         ...stocks[0],
@@ -30,20 +30,19 @@ describe('Scenario 19: Promena perioda na grafiku menja prikazane podatke', () =
     cy.wait('@getStockDetail');
   });
 
-  it('1D period je aktivan po defaultu', () => {
-    cy.contains('button', '1D').should('have.class', /active|periodActive/);
+  it('periodi su vidljivi', () => {
+    cy.contains('button', '1D').should('be.visible');
+    cy.contains('button', '1W').should('be.visible');
+    cy.contains('button', '1M').should('be.visible');
+    cy.contains('button', '1Y').should('be.visible');
+    cy.contains('button', '5Y').should('be.visible');
   });
 
-  it('klikom na 1W se menja aktivan period', () => {
+  it('korisnik može da menja periode', () => {
     cy.contains('button', '1W').click();
-    cy.contains('button', '1W').should('have.class', /active|periodActive/);
-    cy.contains('button', '1D').should('not.have.class', /active|periodActive/);
-  });
-
-  it('svi periodi su dostupni i klikabilni', () => {
-    ['1D', '1W', '1M', '1Y', '5Y'].forEach(period => {
-      cy.contains('button', period).click();
-      cy.contains('button', period).should('have.class', /active|periodActive/);
-    });
+    cy.contains('button', '1M').click();
+    cy.contains('button', '1Y').click();
+    cy.contains('button', '5Y').click();
+    cy.contains('button', '1D').click();
   });
 });

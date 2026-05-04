@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useState, useMemo, useCallback } from 'react';
+import { useRef, useLayoutEffect, useEffect, useState, useMemo, useCallback } from 'react';
 import gsap from 'gsap';
 import { useAuthStore } from '../../store/authStore';
 import { securitiesApi } from '../../api/endpoints/securities';
@@ -674,7 +674,14 @@ export default function ClientSecurities() {
     return Promise.resolve([]);
   }, [activeTab]);
 
-  const { data: rawData, loading, error } = useFetch(fetcher, [activeTab]);
+  const { data: rawData, loading, error, refetch } = useFetch(fetcher, [activeTab]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!loading) refetch();
+    }, 30000);
+    return () => clearInterval(id);
+  }, [loading, refetch]);
 
   const securities = Array.isArray(rawData)
     ? rawData

@@ -1,17 +1,10 @@
 import { buildStocks, loginAs, agentUser } from './helpers';
 
-// NAPOMENA: Automatsko osvežavanje na intervalu trenutno nije implementirano
-// u ClientSecurities.jsx — useFetch ne sadrži polling logiku.
-// Ovaj test dokumentuje očekivano ponašanje i biće aktivan kada se
-// interval-based refresh doda (npr. setInterval + refetch u useFetch ili komponenti).
-
 describe('Scenario 17: Automatsko osvežavanje podataka na intervalu', () => {
-  it('podaci se osvežavaju bez korisničke akcije nakon definisanog intervala', () => {
-    let callCount = 0;
-
-    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, (req) => {
-      callCount++;
-      req.reply({ statusCode: 200, body: buildStocks() });
+  it('podaci se osvežavaju bez korisničke akcije nakon 30 sekundi', () => {
+    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, {
+      statusCode: 200,
+      body: buildStocks(),
     }).as('getStocks');
 
     cy.clock();
@@ -19,10 +12,32 @@ describe('Scenario 17: Automatsko osvežavanje podataka na intervalu', () => {
     loginAs(agentUser, '/securities');
     cy.wait('@getStocks');
 
-    // Simulacija prolaska definisanog intervala (npr. 30 sekundi)
+    cy.tick(100);
+    // Simulacija prolaska 30 sekundi — interval okida refetch
     cy.tick(30_000);
 
-    // Drugi poziv ka API-ju treba da se desi automatski
-    cy.get('@getStocks.all').should('have.length.greaterThan', 1);
+    cy.get('@getStocks.all').should('have.length', 2);
+
+    // Ukupno 2 poziva: inicijalni + jedan automatski
+    cy.get('@getStocks.all').should('have.length', 2);
+  });
+
+  it('ne šalje request dok je prethodni u toku', () => {
+    let callCount = 0;
+
+    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, (req) => {
+      callCount++;
+      // Simuliramo spor odgovor na prvom pozivu
+      req.reply({ statusCode: 200, body: buildStocks(), delay: 35_000 });
+    }).as('getStocksSlowFirst');
+
+    cy.clock();
+
+    loginAs(agentUser, '/securities');
+
+    // Tick od 30s dok je inicijalni request još u toku — ne sme da se okine novi
+    cy.tick(30_000);
+
+    cy.get('@getStocksSlowFirst.all').should('have.length', 1);
   });
 });
