@@ -12,13 +12,17 @@ function toDateInputValue(date = new Date()) {
 export default function OfferModal({ open, stock, isSupervisor, onClose, onSubmit }) {
     const ownerLabel = useMemo(() => {
         if (!stock) return '';
+        // novi shape (iz otc/public)
+        if (stock.owner_name) return stock.owner_name;
+
+        // fallback za stari shape ako nekad dođe
         if (isSupervisor) return stock.bankName ?? stock.owner?.bankName ?? '';
         return `${stock.owner?.firstName ?? ''} ${stock.owner?.lastName ?? ''}, ${stock.owner?.bankName ?? stock.bankName ?? ''}`.trim();
     }, [stock, isSupervisor]);
 
     const stockLabel = useMemo(() => {
         if (!stock) return '';
-        const sym = stock.symbol ? ` (${stock.symbol})` : '';
+        const sym = stock.ticker ? ` (${stock.ticker})` : '';
         return `${stock.name ?? ''}${sym}`;
     }, [stock]);
 
@@ -58,7 +62,7 @@ export default function OfferModal({ open, stock, isSupervisor, onClose, onSubmi
         try {
             await onSubmit({
                 ownerOfStock: ownerLabel,
-                stockId: stock?.id,
+                stockId: stock?.asset_ownership_id,
                 stock: stockLabel,
                 volumeOfStock: v,
                 priceOffer: p,

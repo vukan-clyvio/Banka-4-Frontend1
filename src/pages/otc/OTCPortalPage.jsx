@@ -19,8 +19,6 @@ export default function OtcPortalPage() {
     const user = useAuthStore(s => s.user);
     const { isSupervisor, canAny } = usePermissions();
 
-    // “trade permisija” – ne znam tačan string u vašem sistemu,
-    // pa ovde ostavljam fleksibilno (posle ćemo uskladiti).
     const hasTradePermission = useMemo(() => {
         // probaj da pokriješ najverovatnije permission stringove
         return canAny('trading', 'trade', 'client.trade', 'orders.create');
@@ -33,26 +31,18 @@ export default function OtcPortalPage() {
     const [selectedStock, setSelectedStock] = useState(null);
 
     useEffect(() => {
-        (async () => {
-            setLoading(true);
-            try {
-                const res = await otcApi.getPublic({ page: 1, page_size: 50 });
-                const body = res?.data ?? res;
-                setRows(body?.data ?? []);
-            } finally {
-                setLoading(false);
-            }
-        })();
+        fetchPublic()
     }, []);
     async function fetchPublic() {
         setLoading(true);
         try {
-            const res = await otcApi.getPublic({ page: 1, page_size: 50 });
+            const res = await otcApi.getPublic({ page: 1, page_size: 10 });
             const body = res?.data ?? res;
-            setRows(body?.data ?? []);
-        } catch (err) {
-            console.error(err);
-            setRows([]);
+            const list = Array.isArray(body?.data) ? body.data : [];
+            setRows(list);
+        } catch (e) {
+            console.error(e);
+            setRows([]); // nema mock
         } finally {
             setLoading(false);
         }
@@ -60,7 +50,11 @@ export default function OtcPortalPage() {
     if (!canSeePage) {
         return (
             <div className={styles.wrap}>
-                <h1 className={styles.title}>OTC Portal</h1>
+                <Navbar />
+                <div className={styles.header}>
+                    <h1 className={styles.title}>OTC Portal</h1>
+                </div>
+
                 <div className={styles.card}>
                     Nemaš permisiju za pristup OTC portalu.
                 </div>
@@ -106,22 +100,15 @@ export default function OtcPortalPage() {
                                     : `${r.owner?.firstName ?? ''} ${r.owner?.lastName ?? ''}, ${r.owner?.bankName ?? r.bankName ?? ''}`.trim();
 
                                 return (
-                                    <tr key={r.id}>
-                                        <td>{r.security}</td>
+                                    <tr key={r.asset_ownership_id}>
+                                        <td>{r.security_type}</td>
                                         <td>{r.name}</td>
-                                        <td>{r.symbol}</td>
-                                        <td className={styles.num}>{r.amount}</td>
+                                        <td>{r.ticker}</td>
+                                        <td className={styles.num}>{r.available_amount}</td>
                                         <td className={styles.num}>{r.price}</td>
-                                        <td>{formatDate(r.lastUpdated)}</td>
-                                        <td>{ownerText}</td>
-                                        <td className={styles.actions}>
-                                            <button
-                                                className={styles.offerBtn}
-                                                onClick={() => setSelectedStock(r)}
-                                            >
-                                                Offer
-                                            </button>
-                                        </td>
+                                        <td>{formatDate(r.updated_at)}</td>
+                                        <td>{r.owner_name}</td>
+                                        ...
                                     </tr>
                                 );
                             })}
