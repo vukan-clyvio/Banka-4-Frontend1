@@ -237,8 +237,8 @@ export function buildStocks() {
     },
   ];
 }
-/*
-export function buildFutures() {
+
+export function buildFuturesList() {
   return [
     {
       listing_id: 10,
@@ -258,7 +258,7 @@ export function buildFutures() {
     },
   ];
 }
-*/
+
 export function buildForex() {
   return [
     {
